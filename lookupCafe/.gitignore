@@ -1,0 +1,36 @@
+# Firebase & Google APIs
+GoogleService-Info.plist         # Contains API keys and project identifiers
+Info.plist
+
+# Build Configurations
+Configs/*.xcconfig               # API keys or environment variables may reside here
+
+# Xcode Project Files
+xcuserdata/
+*.xcuserstate
+
+# Derived Data & Build Artifacts
+DerivedData/
+build/
+*.log
+
+# Swift Package Manager
+Packages/
+.swiftpm/
+.build/
+
+# CocoaPods
+Pods/
+Podfile.lock
+Podfile~
+
+# Carthage
+Carthage/
+Carthage/Build/
+
+# Xcode project files that are user-specific
+*.xcworkspace
+project.xcworkspace/
+*.xcuserstate
+*.xcodeproj/project.xcworkspace/
+*.xcodeproj/xcuserdata/
