@@ -1,5 +1,5 @@
 # Firebase & Google APIs
-GoogleService-Info.plist         # Contains API keys and project identifiers
+lookupCafe/GoogleService-Info.plist       # Contains API keys and project identifiers
 Info.plist
 
 # Build Configurations
