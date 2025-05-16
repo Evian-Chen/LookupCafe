@@ -233,20 +233,20 @@ struct CafeDetailView: View {
                             .font(.largeTitle)
                             .bold()
                             .padding(.horizontal)
-                        
-                        // 登入過後才會有愛心圖案
-                        if userManager.isSignIn() {
+                    }
+                    
+                    // 登入過後才會有愛心圖案
+                    if userManager.isSignIn() {
+                        HStack {
                             Button {
                                 userManager.toggleFavorite(cafeObj: cafeObj)
                             } label: {
                                 Image(systemName: userManager.isFavorite(cafeId: cafeObj.id.uuidString) ? "heart.fill" : "heart")
                                     .foregroundColor(.red)
-                                    .fixedSize()
-                                    .frame(width: 50, height: 50, alignment: .trailing)
-                                    .padding()
+                                    .padding(.leading, 10)
                             }
+                            Text(userManager.isFavorite(cafeId: cafeObj.id.uuidString) ? "已經加入我的最愛！" : "加入我的最愛")
                         }
-                        
                     }
                     
                     HStack(spacing: 8) {
