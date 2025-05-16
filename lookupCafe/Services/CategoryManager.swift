@@ -93,6 +93,7 @@ class CategoryManager: ObservableObject {
         var dict: [String: [CafeInfoObject]] = [:]
         for (key, obj) in result {
             dict[key] = obj.cleanCafeData
+            print("🔍 key=\(key), count=\(obj.cleanCafeData.count)")
         }
         LocalCacheManager.shared.saveCafeDict(dict)
 

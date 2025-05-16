@@ -10,26 +10,26 @@ import FirebaseAuth
 
 
 struct SettingsView: View {
-    var body: some View {
-        Text("SettingsView")
-    }
-}
-
-struct LogOutView: View {
+    @AppStorage("isDarkMode") private var isDarkMode = false
     @State private var showingAlert = false
-    var authViewModel: AuthViewModel
+    @EnvironmentObject var authViewModel: AuthViewModel
     
     var body: some View {
-        Button {
-            showingAlert.toggle()
-        } label: {
-            Text("登出")
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding()
-                .background(Color(.systemGray6))
-                .cornerRadius(10)
-                .padding(.horizontal, 50)
+        NavigationStack {
+            Form {
+                Toggle("Dark Mode", isOn: $isDarkMode)
+                
+                // 登出
+                Button {
+                    showingAlert.toggle()
+                } label: {
+                    Text("登出")
+                }
+                
+                Text("[查看原始碼](https://github.com/Evian-Chen/LookupCafe)")
+            }
         }
+        .navigationTitle("Settings")
         .alert("確定要登出嗎？", isPresented: $showingAlert) {
             Button("取消", role: .cancel) { showingAlert.toggle() }
             Button("確定", role: .destructive) {
@@ -40,9 +40,6 @@ struct LogOutView: View {
 }
 
 struct SignedInView: View {
-    // 已經登入的user資料
-    var authViewModel: AuthViewModel
-    
     @ObservedObject var user = UserDataManager.shared
     
     var body: some View {
@@ -59,12 +56,19 @@ struct SignedInView: View {
                 
                 Text("Email: \(user.email)")
                 
-                ForEach(ProfileData.allCases, id: \.self) { dataCase in
-                    dataCase.ButtonView
+                Form {
+                    NavigationLink {
+                        MyFovoriteView()
+                    } label: {
+                        Text("我的最愛")
+                    }
+                    
+                    NavigationLink {
+                        SettingsView()
+                    } label: {
+                        Text("設定")
+                    }
                 }
-                
-                // 登出按鍵額外設定
-                LogOutView(authViewModel: authViewModel)
             } // vstack
         }
     }
@@ -72,7 +76,7 @@ struct SignedInView: View {
 
 // 還沒登入時的View
 struct NotSignedInView: View {
-    var authViewModel: AuthViewModel
+    @EnvironmentObject var authViewModel: AuthViewModel
     
     var body: some View {
         NavigationView {
@@ -114,13 +118,13 @@ struct ProfileView: View {
     var body: some View {
         // 已經登入
         if authViewModel.isSignedIn {
-                        SignedInView(authViewModel: authViewModel)
+                        SignedInView()
         } else  { // 未登入
-            NotSignedInView(authViewModel: authViewModel)
+            NotSignedInView()
         } // not signed in
     }
 }
-
-#Preview {
-    SignedInView(authViewModel: AuthViewModel())
-}
+//
+//#Preview {
+//    SignedInView(authViewModel: AuthViewModel())
+//}

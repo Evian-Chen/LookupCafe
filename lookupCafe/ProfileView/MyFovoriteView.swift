@@ -14,7 +14,7 @@ struct MyFovoriteView: View {
     
     var body: some View {
         if user.favoritesCafes.count != 0 {
-            HStack {
+            VStack {
                 ForEach(user.favoritesCafes) { cafe in
                     CafeInfoCardView(cafeObj: cafe)
                 }

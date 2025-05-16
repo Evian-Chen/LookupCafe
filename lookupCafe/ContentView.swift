@@ -19,6 +19,7 @@ struct TabItemView: View {
 }
 
 struct ContentView: View {
+    @AppStorage("isDarkMode") private var isDarkMode = false
     // 呼叫物件去管理城市行政區的資料
 //    @StateObject var cityDistrictManager = LocationDataManager()
     
@@ -45,6 +46,7 @@ struct ContentView: View {
         .task {
             await categoryManager.asyncInit()
         }
+        .preferredColorScheme(isDarkMode ? .dark : .light)
     }
 }
 
