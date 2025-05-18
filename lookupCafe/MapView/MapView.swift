@@ -121,6 +121,8 @@ struct GMSMapsView: UIViewRepresentable {
     var cafes: [CafeInfoObject]
     @Binding var selectedCafe: CafeInfoObject?
     @Binding var isSheetPresented: Bool
+    
+    @EnvironmentObject var locationDataManager: LocationDataManager
 
     class Coordinator: NSObject, GMSMapViewDelegate {
         var parent: GMSMapsView
@@ -144,7 +146,16 @@ struct GMSMapsView: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> GMSMapView {
-        let camera = GMSCameraPosition.camera(withLatitude: 25.034012, longitude: 121.564461, zoom: 14)
+        let camera = GMSCameraPosition.camera(
+            withLatitude: locationDataManager.userLocation?.latitude ?? 24.0000,
+            longitude: locationDataManager.userLocation?.longitude ?? 121.564461,
+            zoom: 14)
+        
+        // 確認目前抓到的位置，應該是模擬器自定義的
+        print("current location \(locationDataManager.userLocation?.latitude ?? 24.0000), \(locationDataManager.userLocation?.longitude ?? 121.564461)")
+        
+        // mark 目前抓到的位置（使用者目前位置）
+        
         let mapView = GMSMapView(frame: .zero, camera: camera)
         mapView.delegate = context.coordinator
         return mapView
@@ -155,14 +166,14 @@ struct GMSMapsView: UIViewRepresentable {
         for cafe in cafes {
             let marker = GMSMarker()
             
+            // async
             geocodeAddress(address: cafe.address) { coord in
                 marker.position = CLLocationCoordinate2D(latitude: coord?.latitude ?? 0.0, longitude: coord?.longitude ?? 0.0)
+                marker.title = cafe.shopName
+                marker.snippet = cafe.address
+                marker.userData = cafe
+                marker.map = mapView
             }
-            
-            marker.title = cafe.shopName
-            marker.snippet = cafe.address
-            marker.userData = cafe
-            marker.map = mapView
         }
     }
 }
@@ -187,7 +198,7 @@ struct MapView: View {
             
             VStack(spacing: 20) {
                 // 美化後的選擇列
-                VStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 12) {
                     TextField("Search...", text: $searchText)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                         .foregroundColor(.white)
@@ -211,6 +222,11 @@ struct MapView: View {
                                     isEditing = false
                                     searchText = ""
                                     
+                                    // 查詢
+                                    searchPlaces(keyword: searchText) { cafeList in
+                                        self.searchResults = cafeList
+                                    }
+                                    
                                     // Dismiss the keyboard
                                     UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                                 }
@@ -218,17 +234,43 @@ struct MapView: View {
                             }
                         )
                         .shadow(color: .gray.opacity(0.3), radius: 3, x: 0, y: 2)
-                        .padding()
+                        .padding(.horizontal)
                         .onTapGesture {
                             isEditing = true
                         }
                     
+                    HStack {
+                        Spacer()
+                        Button {
+                            backToUserLocation()
+                        } label: {
+                            Image(systemName: "mappin.and.ellipse.circle")
+                                .resizable()
+                                .frame(width: 40, height: 40)
+                                .background(.white)
+                                .cornerRadius(12)
+                                .padding(.trailing, 20)
+                        }
+                    }
+                    
                     Spacer()
-                }
+                } // VStack
             }
             .sheet(isPresented: $isSheetPresented) {
                 if let cafeObj = selectedCafe {
                     CafeDetailView(cafeObj: cafeObj)
+                }
+            }
+            .onAppear {
+                if let coordinates = locationManager.userLocation {
+                    let query = "\(coordinates.longitude), \(coordinates.latitude)"
+                    searchPlaces(keyword: query) { cafeList in
+                        self.searchResults = cafeList
+                    }
+                    
+                    print("query: \(query)")
+                } else {
+                    print("還沒定位")
                 }
             }
         }
@@ -270,6 +312,16 @@ struct MapView: View {
             }
 
         }.resume()
+    }
+    
+    func backToUserLocation() {
+        print("back to user location")
+        // 先抓到使用者一開始的位置 LocationDataManager.userLocation
+        
+        let longtitude = locationManager.userLocation?.longitude
+        let latitude = locationManager.userLocation?.latitude
+        
+        // 將地圖啦回原本的位置
     }
 
 }
