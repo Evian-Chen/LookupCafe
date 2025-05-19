@@ -141,24 +141,33 @@ struct GMSMapsView: UIViewRepresentable {
     @Binding var isSheetPresented: Bool
     @Binding var centerCoordinate: CLLocationCoordinate2D?
     
+    @Binding var currentCenterCoord: CLLocationCoordinate2D?
+    
     @EnvironmentObject var locationDataManager: LocationDataManager
     
     class Coordinator: NSObject, GMSMapViewDelegate {
         var parent: GMSMapsView
         var userMarker: GMSMarker?
+        var mapViewReference: GMSMapView?
         
         init(_ parent: GMSMapsView) {
             self.parent = parent
         }
         
-        func mapView(_ mapView: GMSMapView, didTap marker: GMSMarker, idleAt position: GMSCameraPosition) -> Bool {
+        func mapView(_ mapView: GMSMapView, didTap marker: GMSMarker) -> Bool {
             if let cafe = marker.userData as? CafeInfoObject {
                 print("使用者點擊 \(cafe.shopName)")
                 parent.selectedCafe = cafe
                 parent.isSheetPresented = true
             }
-            
             return true
+        }
+
+        func mapView(_ mapView: GMSMapView, idleAt position: GMSCameraPosition) {
+            DispatchQueue.main.async {
+                self.parent.currentCenterCoord = position.target
+                print("📍 地圖中心已更新：\(position.target.latitude), \(position.target.longitude)")
+            }
         }
         
         /// 建立使用者 marker（僅建立一次）
@@ -189,6 +198,7 @@ struct GMSMapsView: UIViewRepresentable {
         
         let mapView = GMSMapView(frame: .zero, camera: camera)
         mapView.delegate = context.coordinator
+        context.coordinator.mapViewReference = mapView
         return mapView
     }
     
@@ -229,7 +239,8 @@ struct MapView: View {
     @State var searchResults: [CafeInfoObject] = []
     @State private var selectedCafe: CafeInfoObject? = nil
     @State private var isSheetPresented = false
-    @State private var centerCoordinate: CLLocationCoordinate2D? = nil
+    @State private var userCenterCoord: CLLocationCoordinate2D? = nil
+    @State private var currentCenterCoord: CLLocationCoordinate2D? = nil
     
     
     var body: some View {
@@ -238,7 +249,8 @@ struct MapView: View {
             GMSMapsView(cafes: searchResults,
                         selectedCafe: $selectedCafe,
                         isSheetPresented: $isSheetPresented,
-                        centerCoordinate: $centerCoordinate)
+                        centerCoordinate: $userCenterCoord,
+                        currentCenterCoord: $currentCenterCoord)
             .ignoresSafeArea()
             
             VStack(spacing: 20) {
@@ -288,7 +300,12 @@ struct MapView: View {
                         Spacer()
                         
                         Button {
-                            nearbySearch(coord: locationManager.userLocation!)
+                            if let center = currentCenterCoord {
+                                print("搜尋畫面中心：\(center.latitude), \(center.longitude)")
+                                nearbySearch(coord: center)
+                            } else {
+                                print("未取得中心座標")
+                            }
                         } label: {
                             Text("搜尋附近")
                         }
@@ -413,9 +430,8 @@ struct MapView: View {
     func backToUserLocation() {
         print("back to user location")
         if let coord = locationManager.userLocation {
-            centerCoordinate = coord
+            userCenterCoord = coord
         }
-        // 將地圖啦回原本的位置
     }
     
 }
