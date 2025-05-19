@@ -14,11 +14,11 @@ struct GooglePlaceResult: Codable {
 
 struct GooglePlace: Codable {
     let name: String
-    let formatted_address: String
+    let formatted_address: String?
     let geometry: Geometry
     let place_id: String
     let rating: Double?
-    let types: [String]
+    let types: [String]?
 }
 
 struct Geometry: Codable {
@@ -33,25 +33,25 @@ func convertToCafe(place: GooglePlace, completion: @escaping (CafeInfoObject) ->
     let apiKey = Bundle.main.object(forInfoDictionaryKey: "GoogleSearchApi") as? String
     let placeID = place.place_id
     let detailUrl = URL(string: "https://maps.googleapis.com/maps/api/place/details/json?place_id=\(placeID)&fields=name,rating,formatted_phone_number,reviews,opening_hours,website,photos&key=\(apiKey)")!
-
+    
     URLSession.shared.dataTask(with: detailUrl) { data, _, error in
         guard let data = data, error == nil else {
             print("Request error:", error ?? "Unknown error")
             return
         }
-
+        
         do {
             if let jsonObject = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                let rawResult = jsonObject["result"] as? [String: Any] {
-
+                
                 let phoneNumber = rawResult["formatted_phone_number"] as? String ?? "未提供電話"
-
+                
                 var weekdayText: [String] = ["無營業時間資訊"]
                 if let openingHours = rawResult["opening_hours"] as? [String: Any],
                    let weekdays = openingHours["weekday_text"] as? [String] {
                     weekdayText = weekdays
                 }
-
+                
                 var reviews: [Review] = []
                 if let reviewList = rawResult["reviews"] as? [[String: Any]] {
                     for review in reviewList {
@@ -68,12 +68,12 @@ func convertToCafe(place: GooglePlace, completion: @escaping (CafeInfoObject) ->
                         reviews.append(r)
                     }
                 }
-
+                
                 let cafe = CafeInfoObject(
                     shopName: place.name,
                     city: "未知城市",
                     district: "未知區域",
-                    address: place.formatted_address,
+                    address: place.formatted_address ?? "address not provided",
                     phoneNumber: phoneNumber,
                     rating: Int(place.rating ?? 0),
                     services: [false, false, false],
@@ -81,16 +81,34 @@ func convertToCafe(place: GooglePlace, completion: @escaping (CafeInfoObject) ->
                     weekdayText: weekdayText,
                     reviews: reviews
                 )
-
+                
                 DispatchQueue.main.async {
                     completion(cafe)
                 }
             }
         } catch {
-            print("JSON parsing failed:", error)
+            print("JSON parsing failed:", error.localizedDescription)
         }
     }.resume()
 }
+
+func convertNearbyPlaceToCafe(place: GooglePlace) -> CafeInfoObject {
+    return CafeInfoObject(
+        shopName: place.name,
+        city: "",
+        district: "",
+        address: place.formatted_address ?? "",
+        phoneNumber: "",
+        rating: Int(place.rating ?? 0),
+        services: [false, false, false],
+        types: place.types ?? [],
+        weekdayText: [],
+        reviews: [],
+        latitude: place.geometry.location.lat,
+        longitude: place.geometry.location.lng
+    )
+}
+
 
 func geocodeAddress(address: String, completion: @escaping (CLLocationCoordinate2D?) -> Void) {
     let apiKey = Bundle.main.object(forInfoDictionaryKey: "GoogleSearchApi") as? String
@@ -100,7 +118,7 @@ func geocodeAddress(address: String, completion: @escaping (CLLocationCoordinate
         completion(nil)
         return
     }
-
+    
     URLSession.shared.dataTask(with: url) { data, _, _ in
         guard let data = data,
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -122,26 +140,27 @@ struct GMSMapsView: UIViewRepresentable {
     @Binding var selectedCafe: CafeInfoObject?
     @Binding var isSheetPresented: Bool
     @Binding var centerCoordinate: CLLocationCoordinate2D?
-
+    
     @EnvironmentObject var locationDataManager: LocationDataManager
-
+    
     class Coordinator: NSObject, GMSMapViewDelegate {
         var parent: GMSMapsView
         var userMarker: GMSMarker?
-
+        
         init(_ parent: GMSMapsView) {
             self.parent = parent
         }
-
-        func mapView(_ mapView: GMSMapView, didTap marker: GMSMarker) -> Bool {
+        
+        func mapView(_ mapView: GMSMapView, didTap marker: GMSMarker, idleAt position: GMSCameraPosition) -> Bool {
             if let cafe = marker.userData as? CafeInfoObject {
                 print("使用者點擊 \(cafe.shopName)")
                 parent.selectedCafe = cafe
                 parent.isSheetPresented = true
             }
+            
             return true
         }
-
+        
         /// 建立使用者 marker（僅建立一次）
         func addUserMarker(to mapView: GMSMapView, at coord: CLLocationCoordinate2D) {
             if userMarker == nil {
@@ -156,58 +175,46 @@ struct GMSMapsView: UIViewRepresentable {
             }
         }
     }
-
+    
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
     }
-
+    
     func makeUIView(context: Context) -> GMSMapView {
         let camera = GMSCameraPosition.camera(
             withLatitude: locationDataManager.userLocation?.latitude ?? 24.0000,
             longitude: locationDataManager.userLocation?.longitude ?? 121.564461,
             zoom: 14
         )
-
+        
         let mapView = GMSMapView(frame: .zero, camera: camera)
         mapView.delegate = context.coordinator
         return mapView
     }
-
+    
     func updateUIView(_ mapView: GMSMapView, context: Context) {
         if let coord = centerCoordinate {
             let camera = GMSCameraPosition.camera(withTarget: coord, zoom: 15)
             mapView.animate(to: camera)
-
-            // 永久顯示 user marker（不會被 clear 清除）
             context.coordinator.addUserMarker(to: mapView, at: coord)
-
             DispatchQueue.main.async {
-                context.coordinator.userMarker?.title = "目前位置"
                 centerCoordinate = nil
             }
         }
-
+        
         mapView.clear()
-
-        // 重新加回 user marker（因為 clear 會把全部清掉）
         if let userMarker = context.coordinator.userMarker {
             userMarker.map = mapView
         }
-
+        
         for cafe in cafes {
-            geocodeAddress(address: cafe.address) { coord in
-                guard let coord = coord else { return }
-
-                DispatchQueue.main.async {
-                    let marker = GMSMarker()
-                    marker.position = coord
-                    marker.title = "☕️ \(cafe.shopName)"
-                    marker.snippet = cafe.address
-                    marker.userData = cafe
-                    marker.icon = GMSMarker.markerImage(with: .brown)
-                    marker.map = mapView
-                }
-            }
+            let marker = GMSMarker()
+            marker.position = CLLocationCoordinate2D(latitude: cafe.latitude ?? 0.0, longitude: cafe.longitude ?? 0.0)
+            marker.title = "☕️ \(cafe.shopName)"
+            marker.snippet = cafe.address
+            marker.userData = cafe
+            marker.icon = GMSMarker.markerImage(with: .brown)
+            marker.map = mapView
         }
     }
 }
@@ -232,7 +239,7 @@ struct MapView: View {
                         selectedCafe: $selectedCafe,
                         isSheetPresented: $isSheetPresented,
                         centerCoordinate: $centerCoordinate)
-                .ignoresSafeArea()
+            .ignoresSafeArea()
             
             VStack(spacing: 20) {
                 // 美化後的選擇列
@@ -279,6 +286,13 @@ struct MapView: View {
                     
                     HStack {
                         Spacer()
+                        
+                        Button {
+                            nearbySearch(coord: locationManager.userLocation!)
+                        } label: {
+                            Text("搜尋附近")
+                        }
+                        
                         Button {
                             backToUserLocation()
                         } label: {
@@ -301,13 +315,10 @@ struct MapView: View {
             }
             .onAppear {
                 if let coordinates = locationManager.userLocation {
-                    let query = "\(coordinates.longitude), \(coordinates.latitude)"
-                    searchPlaces(keyword: query) { cafeList in
-                        self.searchResults = cafeList
-                    }
+                    // 出現時，先以使用者的經緯度搜尋附近的咖啡廳
+                    nearbySearch(coord: coordinates)
                     
-                    print("query: \(query)")
-                    
+                    // 中央定位在使用者目前位置
                     backToUserLocation()
                 } else {
                     print("還沒定位")
@@ -315,6 +326,51 @@ struct MapView: View {
             }
         }
     }
+    
+    func nearbySearch(coord: CLLocationCoordinate2D) {
+        guard let apiKey = Bundle.main.object(forInfoDictionaryKey: "GoogleSearchApi") as? String else {
+            print("❌ 無法取得 API 金鑰")
+            return
+        }
+        
+        let urlStr = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=\(coord.latitude),\(coord.longitude)&radius=1000&keyword=cafe&key=\(apiKey)"
+        
+        guard let url = URL(string: urlStr) else {
+            print("❌ 無效的 URL")
+            return
+        }
+        
+        print("執行 nearbySearch at \(coord.latitude), \(coord.longitude)")
+        
+        URLSession.shared.dataTask(with: url) { data, _, error in
+            if let error = error {
+                print("❌ 請求錯誤：\(error.localizedDescription)")
+                return
+            }
+            
+            guard let data = data else {
+                print("❌ 沒有取得資料")
+                return
+            }
+            
+            do {
+                let result = try JSONDecoder().decode(GooglePlaceResult.self, from: data)
+                let places = result.results
+                
+                DispatchQueue.main.async {
+                    let cafeList = places.map { convertNearbyPlaceToCafe(place: $0) }
+                    print("nearbySearch 完成，共找到 \(cafeList.count) 間咖啡廳")
+                    self.searchResults = cafeList
+                }
+                
+            } catch {
+                print("❌ JSON 解碼錯誤：\(error)")
+            }
+            
+            
+        }.resume()
+    }
+    
     
     func searchPlaces(keyword: String, completion: @escaping ([CafeInfoObject]) -> Void) {
         let apiKey = Bundle.main.object(forInfoDictionaryKey: "GoogleSearchApi") as? String
@@ -324,17 +380,17 @@ struct MapView: View {
         let query = keyword.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         let urlStr = "https://maps.googleapis.com/maps/api/place/textsearch/json?query=\(query)&key=\(apiKey)"
         guard let url = URL(string: urlStr) else { return }
-
+        
         URLSession.shared.dataTask(with: url) { data, _, _ in
             guard let data = data else { return }
-
+            
             do {
                 let result = try JSONDecoder().decode(GooglePlaceResult.self, from: data)
                 let places = result.results
-
+                
                 var cafeList: [CafeInfoObject] = []
                 let group = DispatchGroup()
-
+                
                 for place in places {
                     group.enter()
                     convertToCafe(place: place) { cafe in
@@ -342,15 +398,15 @@ struct MapView: View {
                         group.leave()
                     }
                 }
-
+                
                 group.notify(queue: .main) {
                     completion(cafeList)
                 }
-
+                
             } catch {
                 print("Parsing error:", error)
             }
-
+            
         }.resume()
     }
     
@@ -361,5 +417,5 @@ struct MapView: View {
         }
         // 將地圖啦回原本的位置
     }
-
+    
 }

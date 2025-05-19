@@ -155,7 +155,9 @@ class Categoryobjc: ObservableObject {
                 services: servicesArray,
                 types: cafe["types"] as? [String] ?? [],
                 weekdayText: cafe["weekday_text"] as? [String] ?? ["no business hours available"],
-                reviews: nil
+                reviews: nil,
+                latitude: cafe["latitude"] as? Double ?? 0.0,
+                longitude: cafe["longitude"] as? Double ?? 0.0
             )
 
             cafeInfoObjList.append(cleanCafeInfoObjc)

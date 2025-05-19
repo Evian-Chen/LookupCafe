@@ -28,6 +28,9 @@ struct CafeInfoObject: Codable, Identifiable {
     var weekdayText: [String]
     
     var reviews: [Review]?
+    
+    var latitude: Double?
+    var longitude: Double?
 }
 
 extension CafeInfoObject {
@@ -61,7 +64,9 @@ extension CafeInfoObject {
             services: data["services"] as? [Bool] ?? [],
             types: data["types"] as? [String] ?? [],
             weekdayText: data["weekdayText"] as? [String] ?? [],
-            reviews: reviews
+            reviews: reviews,
+            latitude: data["latitude"] as? Double ?? 0.0,
+            longitude: data["longitude"] as? Double ?? 0.0
         )
     }
 }
