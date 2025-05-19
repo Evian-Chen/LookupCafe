@@ -122,11 +122,12 @@ struct GMSMapsView: UIViewRepresentable {
     @Binding var selectedCafe: CafeInfoObject?
     @Binding var isSheetPresented: Bool
     @Binding var centerCoordinate: CLLocationCoordinate2D?
-    
+
     @EnvironmentObject var locationDataManager: LocationDataManager
 
     class Coordinator: NSObject, GMSMapViewDelegate {
         var parent: GMSMapsView
+        var userMarker: GMSMarker?
 
         init(_ parent: GMSMapsView) {
             self.parent = parent
@@ -140,6 +141,20 @@ struct GMSMapsView: UIViewRepresentable {
             }
             return true
         }
+
+        /// 建立使用者 marker（僅建立一次）
+        func addUserMarker(to mapView: GMSMapView, at coord: CLLocationCoordinate2D) {
+            if userMarker == nil {
+                let marker = GMSMarker(position: coord)
+                marker.title = "📍 現在位置"
+                marker.icon = GMSMarker.markerImage(with: .systemRed)
+                marker.map = mapView
+                self.userMarker = marker
+            } else {
+                userMarker?.position = coord
+                userMarker?.map = mapView
+            }
+        }
     }
 
     func makeCoordinator() -> Coordinator {
@@ -150,45 +165,48 @@ struct GMSMapsView: UIViewRepresentable {
         let camera = GMSCameraPosition.camera(
             withLatitude: locationDataManager.userLocation?.latitude ?? 24.0000,
             longitude: locationDataManager.userLocation?.longitude ?? 121.564461,
-            zoom: 14)
-        
-        // 確認目前抓到的位置，應該是模擬器自定義的
-        print("current location \(locationDataManager.userLocation?.latitude ?? 24.0000), \(locationDataManager.userLocation?.longitude ?? 121.564461)")
-        
-        // mark 目前抓到的位置（使用者目前位置）
-        
+            zoom: 14
+        )
+
         let mapView = GMSMapView(frame: .zero, camera: camera)
         mapView.delegate = context.coordinator
         return mapView
     }
 
     func updateUIView(_ mapView: GMSMapView, context: Context) {
-        mapView.clear()
-        
         if let coord = centerCoordinate {
             let camera = GMSCameraPosition.camera(withTarget: coord, zoom: 15)
             mapView.animate(to: camera)
-            
-            let userMarker = GMSMarker(position: coord)
-            userMarker.title = "現在位置"
-            userMarker.icon = GMSMarker.markerImage(with: .blue)
-            userMarker.map = mapView
-            
+
+            // 永久顯示 user marker（不會被 clear 清除）
+            context.coordinator.addUserMarker(to: mapView, at: coord)
+
             DispatchQueue.main.async {
-                centerCoordinate = nil  // 清除指令，避免重複執行
+                context.coordinator.userMarker?.title = "目前位置"
+                centerCoordinate = nil
             }
         }
-        
+
+        mapView.clear()
+
+        // 重新加回 user marker（因為 clear 會把全部清掉）
+        if let userMarker = context.coordinator.userMarker {
+            userMarker.map = mapView
+        }
+
         for cafe in cafes {
-            let marker = GMSMarker()
-            
-            // async
             geocodeAddress(address: cafe.address) { coord in
-                marker.position = CLLocationCoordinate2D(latitude: coord?.latitude ?? 0.0, longitude: coord?.longitude ?? 0.0)
-                marker.title = cafe.shopName
-                marker.snippet = cafe.address
-                marker.userData = cafe
-                marker.map = mapView
+                guard let coord = coord else { return }
+
+                DispatchQueue.main.async {
+                    let marker = GMSMarker()
+                    marker.position = coord
+                    marker.title = "☕️ \(cafe.shopName)"
+                    marker.snippet = cafe.address
+                    marker.userData = cafe
+                    marker.icon = GMSMarker.markerImage(with: .brown)
+                    marker.map = mapView
+                }
             }
         }
     }
@@ -289,6 +307,8 @@ struct MapView: View {
                     }
                     
                     print("query: \(query)")
+                    
+                    backToUserLocation()
                 } else {
                     print("還沒定位")
                 }

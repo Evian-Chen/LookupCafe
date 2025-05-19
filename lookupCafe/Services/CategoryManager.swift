@@ -34,7 +34,7 @@ class CategoryManager: ObservableObject {
     func asyncInit() async {
         self.categories = readInCategories()
         
-//        LocalCacheManager.shared.clearCache()
+//        LocalCacheManager.shared.clearCache()  // 清除沙盒資料
         if let cached = LocalCacheManager.shared.loadCafeDict() {
             for (category, cafeList) in cached {
                 let obj = Categoryobjc(categoryName: category, data: [])
