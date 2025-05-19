@@ -117,14 +117,18 @@ struct ProfileView: View {
     
     var body: some View {
         // 已經登入
-        if authViewModel.isSignedIn {
-                        SignedInView()
-        } else  { // 未登入
-            NotSignedInView()
-        } // not signed in
+        if !authViewModel.didCheckedUser {
+            Text("載入中...")
+        } else {
+            if authViewModel.isSignedIn {
+                SignedInView()
+                    .onAppear {
+                        print(authViewModel.currentUser?.email ?? "not sign in")
+                    }
+            } else  { // 未登入
+                NotSignedInView()
+            } // not signed in
+        }
     }
 }
-//
-//#Preview {
-//    SignedInView(authViewModel: AuthViewModel())
-//}
+

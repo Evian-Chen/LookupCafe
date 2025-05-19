@@ -121,6 +121,7 @@ struct GMSMapsView: UIViewRepresentable {
     var cafes: [CafeInfoObject]
     @Binding var selectedCafe: CafeInfoObject?
     @Binding var isSheetPresented: Bool
+    @Binding var centerCoordinate: CLLocationCoordinate2D?
     
     @EnvironmentObject var locationDataManager: LocationDataManager
 
@@ -163,6 +164,21 @@ struct GMSMapsView: UIViewRepresentable {
 
     func updateUIView(_ mapView: GMSMapView, context: Context) {
         mapView.clear()
+        
+        if let coord = centerCoordinate {
+            let camera = GMSCameraPosition.camera(withTarget: coord, zoom: 15)
+            mapView.animate(to: camera)
+            
+            let userMarker = GMSMarker(position: coord)
+            userMarker.title = "現在位置"
+            userMarker.icon = GMSMarker.markerImage(with: .blue)
+            userMarker.map = mapView
+            
+            DispatchQueue.main.async {
+                centerCoordinate = nil  // 清除指令，避免重複執行
+            }
+        }
+        
         for cafe in cafes {
             let marker = GMSMarker()
             
@@ -188,12 +204,16 @@ struct MapView: View {
     @State var searchResults: [CafeInfoObject] = []
     @State private var selectedCafe: CafeInfoObject? = nil
     @State private var isSheetPresented = false
+    @State private var centerCoordinate: CLLocationCoordinate2D? = nil
     
     
     var body: some View {
         ZStack {
             //             地圖
-            GMSMapsView(cafes: searchResults, selectedCafe: $selectedCafe, isSheetPresented: $isSheetPresented)
+            GMSMapsView(cafes: searchResults,
+                        selectedCafe: $selectedCafe,
+                        isSheetPresented: $isSheetPresented,
+                        centerCoordinate: $centerCoordinate)
                 .ignoresSafeArea()
             
             VStack(spacing: 20) {
@@ -316,11 +336,9 @@ struct MapView: View {
     
     func backToUserLocation() {
         print("back to user location")
-        // 先抓到使用者一開始的位置 LocationDataManager.userLocation
-        
-        let longtitude = locationManager.userLocation?.longitude
-        let latitude = locationManager.userLocation?.latitude
-        
+        if let coord = locationManager.userLocation {
+            centerCoordinate = coord
+        }
         // 將地圖啦回原本的位置
     }
 

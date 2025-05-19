@@ -12,9 +12,34 @@ import GoogleSignIn
 import SwiftUICore
 
 class AuthViewModel: ObservableObject {
-    @Published var user: User?
+    @Published var currentUser: User?
     @Published var isSignedIn: Bool = false
-        
+    
+    @Published var didCheckedUser: Bool = false
+    
+    private var handle: AuthStateDidChangeListenerHandle?
+    
+    init() {
+        handle = Auth.auth().addStateDidChangeListener { _, user in
+            DispatchQueue.main.async {
+                self.currentUser = user
+                self.isSignedIn = user != nil
+                self.setupUserDocument()
+                self.didCheckedUser = true
+                
+                // 這邊是更新「現在的使用者」的相關資料給UserDataManager，因為之後的資料操作是由UserDataManager處理
+                UserDataManager.shared.SignInInit()
+                print("使用者狀態更新：\(self.currentUser?.email ?? "未登入")")
+            }
+        }
+    }
+    
+    deinit {
+        if let handle = handle {
+            Auth.auth().removeStateDidChangeListener(handle)
+        }
+    }
+    
     func SignInByGoogle() {
         guard let clientID = FirebaseApp.app()?.options.clientID else { return }
         
@@ -54,7 +79,7 @@ class AuthViewModel: ObservableObject {
                 
                 // 成功登入
                 DispatchQueue.main.async {
-                    self.user = result?.user
+                    self.currentUser = result?.user
                     self.isSignedIn = true
                     
                     // load in 目前的登入者的資料庫
@@ -72,6 +97,7 @@ class AuthViewModel: ObservableObject {
         do {
             self.isSignedIn = false
             try firebaseAuth.signOut()
+            self.currentUser = nil
         } catch let signOutError as NSError {
             print("Error signing out: %@", signOutError)
         }
