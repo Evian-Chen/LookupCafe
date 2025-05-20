@@ -78,7 +78,7 @@ struct CafeDetailView: View {
     
     @ViewBuilder
     func serviceIcon() -> some View {
-        HStack {
+        VStack {
             if cafeObj.services[1] {
                 HStack {
                     Image(systemName: "cup.and.saucer.fill")
@@ -167,45 +167,71 @@ struct CafeDetailView: View {
         }
     }
     
+    // apple map 導航功能
+    func openInAppleMaps(latitude: Double, longitude: Double, placeName: String) {
+        let coordinate = "\(latitude),\(longitude)"
+        let encodedName = placeName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "目的地"
+        
+        let urlString = "http://maps.apple.com/?daddr=\(coordinate)&q=\(encodedName)&dirflg=d"
+        
+        if let url = URL(string: urlString) {
+            UIApplication.shared.open(url, options: [:], completionHandler: nil)
+        }
+    }
+    
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 VStack(alignment: .leading, spacing: 8) {
                     // 顯示店名和加入我的最愛
-                    HStack {
-                        Text(cafeObj.shopName)
-                            .font(.largeTitle)
-                            .bold()
-                            .padding(.horizontal, 8)
-                    }
+                    Text(cafeObj.shopName)
+                        .font(.largeTitle)
+                        .bold()
+                        .padding(.horizontal, 8)
                     
-                    // 登入過後才會有愛心圖案
-                    if userManager.isSignIn() {
-                        HStack {
-                            Button {
-                                userManager.toggleFavorite(cafeObj: cafeObj)
-                            } label: {
-                                Image(systemName: userManager.isFavorite(cafeId: cafeObj.id.uuidString) ? "heart.fill" : "heart")
-                                    .foregroundColor(.red)
+                    HStack {
+                        // 登入過後才會有愛心圖案
+                        if userManager.isSignIn() {
+                            HStack {
+                                Button {
+                                    userManager.toggleFavorite(cafeObj: cafeObj)
+                                } label: {
+                                    Image(systemName: userManager.isFavorite(cafeId: cafeObj.id.uuidString) ? "heart.fill" : "heart")
+                                        .foregroundColor(.red)
+                                }
+                                Text(userManager.isFavorite(cafeId: cafeObj.id.uuidString) ? "已經加入我的最愛！" : "加入我的最愛")
                             }
-                            Text(userManager.isFavorite(cafeId: cafeObj.id.uuidString) ? "已經加入我的最愛！" : "加入我的最愛")
+                        }
+                        
+                        HStack(spacing: 8) {
+                            Image(systemName: "star.fill")
+                                .foregroundColor(.yellow)
+                            Text(String(cafeObj.rating))
+                                .bold()
+                                .font(.title3)
                         }
                     }
                     
-                    HStack(spacing: 8) {
-                        Image(systemName: "star.fill")
-                            .foregroundColor(.yellow)
-                        Text(String(cafeObj.rating))
-                            .bold()
-                            .font(.title3)
-                    }
-                    
                     HStack {
-                        Label(cafeObj.address, systemImage: "mappin.and.ellipse")
-                            .font(.subheadline)
-                        Spacer()
-                        Label(cafeObj.phoneNumber, systemImage: "phone.fill")
-                            .font(.subheadline)
+                        VStack(alignment: .leading) {
+                            Label(cafeObj.address, systemImage: "mappin.and.ellipse")
+                                .font(.subheadline)
+                            Label(cafeObj.phoneNumber, systemImage: "phone.fill")
+                                .font(.subheadline)
+                        }
+                        
+                        Button {
+                            if let lat = cafeObj.latitude, let lng = cafeObj.longitude {
+                                openInAppleMaps(latitude: lat, longitude: lng, placeName: cafeObj.shopName)
+                            }
+                        } label: {
+                            Image(systemName: "location.fill")
+                            Text("用 Apple 地圖導航")
+                        }
+                        .padding(4)
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
                     }
                 }
                 .padding()
@@ -213,18 +239,21 @@ struct CafeDetailView: View {
                 .cornerRadius(12)
                 .shadow(color: .gray.opacity(0.2), radius: 5, x: 0, y: 3)
                 
-                // 營業時間
-                DisclosureGroup("營業時間") {
-                    ForEach(cafeObj.weekdayText, id: \.self) { weekday in
-                        Text(weekday)
+                HStack {
+                    // 營業時間
+                    DisclosureGroup("營業時間") {
+                        ForEach(cafeObj.weekdayText, id: \.self) { weekday in
+                            Text(weekday)
+                        }
                     }
+                    .padding(8)
+                    .background(.white)
+                    .cornerRadius(12)
+                    
+                    // 服務項目
+                    serviceCard()
                 }
-                .padding(8)
-                .background(.white)
-                .cornerRadius(12)
                 
-                // 服務項目
-                serviceCard()
                 
                 // 地圖預覽
                 CafeMapPreviewView(address: cafeObj.address, shopName: cafeObj.shopName)
