@@ -32,7 +32,7 @@ struct Geometry: Codable {
 func convertToCafe(place: GooglePlace, completion: @escaping (CafeInfoObject) -> Void) {
     let apiKey = Bundle.main.object(forInfoDictionaryKey: "GoogleSearchApi") as? String
     let placeID = place.place_id
-    let detailUrl = URL(string: "https://maps.googleapis.com/maps/api/place/details/json?place_id=\(placeID)&fields=name,rating,formatted_phone_number,reviews,opening_hours,website,photos&key=\(apiKey)")!
+    let detailUrl = URL(string: "https://maps.googleapis.com/maps/api/place/details/json?place_id=\(placeID)&key=\(apiKey)")!
     
     URLSession.shared.dataTask(with: detailUrl) { data, _, error in
         guard let data = data, error == nil else {
@@ -44,7 +44,6 @@ func convertToCafe(place: GooglePlace, completion: @escaping (CafeInfoObject) ->
             if let jsonObject = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                let rawResult = jsonObject["result"] as? [String: Any] {
                 let address = rawResult["formatted_address"] as? String ?? "originalCafe.address"
-                
                 let phoneNumber = rawResult["formatted_phone_number"] as? String ?? "未提供電話"
                 
                 var weekdayText: [String] = ["無營業時間資訊"]
@@ -159,7 +158,7 @@ struct GMSMapsView: UIViewRepresentable {
         
         func fetchFullCafeInfo(placeId: String, originalCafe: CafeInfoObject, completion: @escaping (CafeInfoObject) -> Void) {
             let apiKey = Bundle.main.object(forInfoDictionaryKey: "GoogleSearchApi") as? String
-            let detailUrlStr = "https://maps.googleapis.com/maps/api/place/details/json?place_id=\(placeId)&fields=name,rating,formatted_phone_number,reviews,opening_hours,website,photos&key=\(apiKey ?? "")"
+            let detailUrlStr = "https://maps.googleapis.com/maps/api/place/details/json?place_id=\(placeId)&key=\(apiKey ?? "")"
             
             guard let url = URL(string: detailUrlStr) else {
                 print("無效的 detail URL")
@@ -185,7 +184,7 @@ struct GMSMapsView: UIViewRepresentable {
                            let weekdays = openingHours["weekday_text"] as? [String] {
                             weekdayText = weekdays
                         }
-
+                        
                         var reviews: [Review] = []
                         if let reviewList = rawResult["reviews"] as? [[String: Any]] {
                             for review in reviewList {
@@ -202,13 +201,24 @@ struct GMSMapsView: UIViewRepresentable {
                                 reviews.append(r)
                             }
                         }
-
+                        
+                        let services = [
+                            rawResult["serves_beer"] as? Bool ?? false,
+                            rawResult["serves_breakfast"] as? Bool ?? false,
+                            rawResult["serves_brunch"] as? Bool ?? false,
+                            rawResult["serves_dinner"] as? Bool ?? false,
+                            rawResult["serves_lunch"] as? Bool ?? false,
+                            rawResult["serves_wine"] as? Bool ?? false,
+                            rawResult["takeout"] as? Bool ?? false
+                        ]
+                        
                         // 合併原本的內容與補充資料
                         var updatedCafe = originalCafe
                         updatedCafe.phoneNumber = phoneNumber
                         updatedCafe.weekdayText = weekdayText
                         updatedCafe.reviews = reviews
                         updatedCafe.address = address
+                        updatedCafe.services = services
 
                         completion(updatedCafe)
 
@@ -228,7 +238,7 @@ struct GMSMapsView: UIViewRepresentable {
             if let cafe = marker.userData as? CafeInfoObject {
                 print("使用者點擊 \(cafe.shopName), \(cafe.address)")
                 
-                // ⬇️ 使用 placeId 進行詳細查詢
+                // 使用 placeId 進行詳細查詢
                 if let placeId = cafe.placeId {
                     fetchFullCafeInfo(placeId: placeId, originalCafe: cafe) { fullCafe in
                         DispatchQueue.main.async {
