@@ -11,6 +11,7 @@ import Foundation
 struct CafeInfoObject: Codable, Identifiable {
     var id = UUID()  // no need to add \.self when ForEach
     
+    var placeId: String?
     var shopName: String
     var city: String
     var district: String
@@ -55,6 +56,7 @@ extension CafeInfoObject {
         
         return CafeInfoObject(
             id: uuid,
+            placeId: data["place_id"] as? String ?? "noPlaceId",
             shopName: data["shopName"] as? String ?? "",
             city: data["city"] as? String ?? "",
             district: data["district"] as? String ?? "",

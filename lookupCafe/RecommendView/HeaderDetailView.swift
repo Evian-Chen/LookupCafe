@@ -54,7 +54,7 @@ struct HeaderDetailView: View {
             } // hstack
             .padding(.horizontal)
             
-            // 印出篩選的內容
+            // 印出篩選的關鍵字
             LazyVGrid(columns: columns, alignment: .leading) {
                 ForEach(Array(Mirror(reflecting: curFilterQuery).children.enumerated()), id: \.offset) { index, child in
                     if let label = child.label {
@@ -120,7 +120,7 @@ struct HeaderDetailView: View {
                 VStack(spacing: 16) {
                     if categoryManager.isLoaded {
                         if let categoryObj = categoryManager.categoryObjcList[category.rawValue] {
-                            ForEach(categoryObj.cleanCafeData) { cafeObj in
+                            ForEach(categoryObj.cleanCafeData.prefix(10)) { cafeObj in
                                 CafeInfoCardView(cafeObj: cafeObj)
                             }
                         } else {
@@ -134,7 +134,6 @@ struct HeaderDetailView: View {
             }
             .onAppear {
                 print("🪵 categoryName: \(category.rawValue)")
-//                print("🪵 所有 keys: \(categoryManager.categoryObjcList.keys)")
             }
             .navigationTitle("這裡是 \(category.title)")
             .navigationBarTitleDisplayMode(.large)

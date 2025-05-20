@@ -43,6 +43,7 @@ func convertToCafe(place: GooglePlace, completion: @escaping (CafeInfoObject) ->
         do {
             if let jsonObject = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                let rawResult = jsonObject["result"] as? [String: Any] {
+                let address = rawResult["formatted_address"] as? String ?? "originalCafe.address"
                 
                 let phoneNumber = rawResult["formatted_phone_number"] as? String ?? "未提供電話"
                 
@@ -70,10 +71,11 @@ func convertToCafe(place: GooglePlace, completion: @escaping (CafeInfoObject) ->
                 }
                 
                 let cafe = CafeInfoObject(
+                    placeId: place.place_id,
                     shopName: place.name,
                     city: "未知城市",
                     district: "未知區域",
-                    address: place.formatted_address ?? "address not provided",
+                    address: address,
                     phoneNumber: phoneNumber,
                     rating: Int(place.rating ?? 0),
                     services: [false, false, false],
@@ -94,10 +96,11 @@ func convertToCafe(place: GooglePlace, completion: @escaping (CafeInfoObject) ->
 
 func convertNearbyPlaceToCafe(place: GooglePlace) -> CafeInfoObject {
     return CafeInfoObject(
+        placeId: place.place_id,
         shopName: place.name,
         city: "",
         district: "",
-        address: place.formatted_address ?? "",
+        address: place.formatted_address ?? "no address avaliable!!",
         phoneNumber: "",
         rating: Int(place.rating ?? 0),
         services: [false, false, false],
@@ -154,15 +157,95 @@ struct GMSMapsView: UIViewRepresentable {
             self.parent = parent
         }
         
+        func fetchFullCafeInfo(placeId: String, originalCafe: CafeInfoObject, completion: @escaping (CafeInfoObject) -> Void) {
+            let apiKey = Bundle.main.object(forInfoDictionaryKey: "GoogleSearchApi") as? String
+            let detailUrlStr = "https://maps.googleapis.com/maps/api/place/details/json?place_id=\(placeId)&fields=name,rating,formatted_phone_number,reviews,opening_hours,website,photos&key=\(apiKey ?? "")"
+            
+            guard let url = URL(string: detailUrlStr) else {
+                print("無效的 detail URL")
+                completion(originalCafe)
+                return
+            }
+
+            URLSession.shared.dataTask(with: url) { data, _, error in
+                guard let data = data, error == nil else {
+                    print("請求失敗：\(error?.localizedDescription ?? "未知錯誤")")
+                    completion(originalCafe)
+                    return
+                }
+
+                do {
+                    if let jsonObject = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let rawResult = jsonObject["result"] as? [String: Any] {
+                        let address = rawResult["formatted_address"] as? String ?? originalCafe.address
+                        
+                        let phoneNumber = rawResult["formatted_phone_number"] as? String ?? "未提供電話"
+                        var weekdayText: [String] = ["無營業時間資訊"]
+                        if let openingHours = rawResult["opening_hours"] as? [String: Any],
+                           let weekdays = openingHours["weekday_text"] as? [String] {
+                            weekdayText = weekdays
+                        }
+
+                        var reviews: [Review] = []
+                        if let reviewList = rawResult["reviews"] as? [[String: Any]] {
+                            for review in reviewList {
+                                let reviewerName = review["author_name"] as? String ?? "匿名"
+                                let rating = review["rating"] as? Int ?? 0
+                                let text = review["text"] as? String ?? ""
+                                let timeDesc = review["relative_time_description"] as? String ?? ""
+                                let r = Review(
+                                    review_time: timeDesc,
+                                    reviewer_name: reviewerName,
+                                    reviewer_rating: rating,
+                                    reviewer_text: text
+                                )
+                                reviews.append(r)
+                            }
+                        }
+
+                        // 合併原本的內容與補充資料
+                        var updatedCafe = originalCafe
+                        updatedCafe.phoneNumber = phoneNumber
+                        updatedCafe.weekdayText = weekdayText
+                        updatedCafe.reviews = reviews
+                        updatedCafe.address = address
+
+                        completion(updatedCafe)
+
+                    } else {
+                        print("無 result 欄位")
+                        completion(originalCafe)
+                    }
+                } catch {
+                    print("JSON 解碼錯誤：\(error.localizedDescription)")
+                    completion(originalCafe)
+                }
+            }.resume()
+        }
+
+        
         func mapView(_ mapView: GMSMapView, didTap marker: GMSMarker) -> Bool {
             if let cafe = marker.userData as? CafeInfoObject {
-                print("使用者點擊 \(cafe.shopName)")
-                parent.selectedCafe = cafe
-                parent.isSheetPresented = true
+                print("使用者點擊 \(cafe.shopName), \(cafe.address)")
+                
+                // ⬇️ 使用 placeId 進行詳細查詢
+                if let placeId = cafe.placeId {
+                    fetchFullCafeInfo(placeId: placeId, originalCafe: cafe) { fullCafe in
+                        DispatchQueue.main.async {
+                            self.parent.selectedCafe = fullCafe
+                            self.parent.isSheetPresented = true
+                        }
+                    }
+                } else {
+                    // 如果沒有 placeId，就直接顯示原本資料
+                    self.parent.selectedCafe = cafe
+                    self.parent.isSheetPresented = true
+                }
             }
             return true
         }
 
+        
         func mapView(_ mapView: GMSMapView, idleAt position: GMSCameraPosition) {
             DispatchQueue.main.async {
                 self.parent.currentCenterCoord = position.target
@@ -328,6 +411,9 @@ struct MapView: View {
             .sheet(isPresented: $isSheetPresented) {
                 if let cafeObj = selectedCafe {
                     CafeDetailView(cafeObj: cafeObj)
+                    
+                    // CafeDetailView 無法顯示地址電話等等，可能要印出資料並且確認欄位都有
+                    
                 }
             }
             .onAppear {
