@@ -7,6 +7,7 @@
 
 import Foundation
 import FirebaseFirestore
+import CoreLocation
 
 class FirestoreManager {
     @Published var db: Firestore
@@ -168,5 +169,56 @@ class Categoryobjc: ObservableObject {
             self.cleanCafeData = cafeInfoObjList
         }
     }
-}
+    
+    func getFilteredData(location: CLLocationCoordinate2D, filter: [String]) -> [CafeInfoObject] {
+        return []
+    }
+    
+    func getDefaultFilterData(location: CLLocationCoordinate2D) async -> [CafeInfoObject] {
+        guard let locationArray = await getCityDist(location: location),
+              locationArray.count == 2 else {
+            print("無法取得地理位置")
+            return []
+        }
 
+        let city = locationArray[0]
+        let district = locationArray[1]
+
+        guard !city.isEmpty, !district.isEmpty else {
+            print("取得的地理位置為空")
+            return []
+        }
+
+        let all = self.cleanCafeData
+        let matched = all.filter { $0.city == city && $0.district == district }
+
+        print("Filtered \(matched.count) cafes for \(city)-\(district)")
+        return matched
+    }
+
+
+    
+    func getCityDist(location: CLLocationCoordinate2D) async -> [String]? {
+        let geocoder = CLGeocoder()
+        let clLocation = CLLocation(latitude: location.latitude, longitude: location.longitude)
+
+        return await withCheckedContinuation { continuation in
+            geocoder.reverseGeocodeLocation(clLocation) { placemarks, error in
+                if let error = error {
+                    print("Reverse geocode failed: \(error.localizedDescription)")
+                    continuation.resume(returning: nil)
+                    return
+                }
+
+                guard let placemark = placemarks?.first else {
+                    continuation.resume(returning: nil)
+                    return
+                }
+
+                let city = placemark.administrativeArea ?? ""
+                let district = placemark.locality ?? placemark.subAdministrativeArea ?? ""
+                continuation.resume(returning: [city, district])
+            }
+        }
+    }
+}

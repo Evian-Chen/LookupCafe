@@ -36,7 +36,7 @@ class LocationDataManager: NSObject, ObservableObject, CLLocationManagerDelegate
         
         loadCityDistrictData()
         
-        print("📍 啟動 LocationDataManager")
+        print("啟動 LocationDataManager")
         print("目前授權狀態：\(locationManager.authorizationStatus.rawValue)")
     }
 

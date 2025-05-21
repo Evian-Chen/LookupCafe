@@ -10,6 +10,8 @@ import SwiftUI
 // 點進去之後出現該分類的每一間咖啡廳
 struct HeaderDetailView: View {
     var category: RecommendationCategory
+    var cafes: [CafeInfoObject]
+    
     @State private var showingSheetFilter = false
     @State var curFilterQuery: FilterQuery = FilterQuery()
     @State private var searchText = ""
@@ -118,16 +120,13 @@ struct HeaderDetailView: View {
             
             ScrollView {
                 VStack(spacing: 16) {
-                    if categoryManager.isLoaded {
-                        if let categoryObj = categoryManager.categoryObjcList[category.rawValue] {
-                            ForEach(categoryObj.cleanCafeData.prefix(10)) { cafeObj in
-                                CafeInfoCardView(cafeObj: cafeObj)
-                            }
-                        } else {
-                            Text("找不到該分類資料")
-                        }
+                    if cafes.isEmpty {
+                        Text("沒有該分類資料")
                     } else {
-                        ProgressView("正在載入資料...")
+                        // TODO: 在使用者使用篩選之前，先以目前所在縣市進行顯示，如果篩選的內容不為空，就要顯示篩選過後的咖啡廳（使用filterQuery）
+                        ForEach(cafes.prefix(10)) { cafe in
+                            CafeInfoCardView(cafeObj: cafe)
+                        }
                     }
                 }
                 .padding(.top)

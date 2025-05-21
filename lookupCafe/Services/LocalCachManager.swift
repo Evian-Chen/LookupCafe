@@ -23,9 +23,9 @@ class LocalCacheManager {
         do {
             let data = try JSONEncoder().encode(dict)
             try data.write(to: fileURL)
-            print("✅ 已儲存多分類快取到本地：\(fileURL)")
+            print("已儲存多分類快取到本地：\(fileURL)")
         } catch {
-            print("❌ 儲存快取失敗：\(error)")
+            print("儲存快取失敗：\(error)")
         }
     }
 
@@ -34,10 +34,10 @@ class LocalCacheManager {
         do {
             let data = try Data(contentsOf: fileURL)
             let decoded = try JSONDecoder().decode([String: [CafeInfoObject]].self, from: data)
-            print("✅ 已從本地快取讀取多分類資料")
+            print("已從本地快取讀取多分類資料")
             return decoded
         } catch {
-            print("⚠️ 無法讀取快取：\(error)")
+            print("無法讀取快取：\(error)")
             return nil
         }
     }
@@ -51,9 +51,9 @@ class LocalCacheManager {
     func clearCache() {
         do {
             try FileManager.default.removeItem(at: fileURL)
-            print("🗑 已清除快取")
+            print("已清除快取")
         } catch {
-            print("❌ 清除快取失敗：\(error)")
+            print("清除快取失敗：\(error)")
         }
     }
 }
