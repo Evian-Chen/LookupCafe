@@ -170,9 +170,63 @@ class Categoryobjc: ObservableObject {
         }
     }
     
-    func getFilteredData(location: CLLocationCoordinate2D, filter: [String]) -> [CafeInfoObject] {
-        return []
+    func getFilteredData(location: CLLocationCoordinate2D, filter: FilterQuery, defaultCafes: [CafeInfoObject]) -> [CafeInfoObject] {
+        // 如果條件完全沒設定，就直接回傳預設列表
+        let hasAnyFilter =
+            !(filter.keyword.isEmpty) ||
+            filter.cities != "全部" ||
+            filter.districts != "全部" ||
+            filter.sockets != "全部" ||
+            filter.wifi != "全部" ||
+            filter.stayTime != "全部"
+
+        guard hasAnyFilter else {
+            return defaultCafes
+        }
+
+        // OR 策略：只要有一個條件符合，就納入
+        return defaultCafes.filter { cafe in
+            var match = false
+
+            // 關鍵字（名稱 / 地址）
+            if !filter.keyword.isEmpty && !(filter.keyword.count == 1 && filter.keyword[0].isEmpty) {
+                let lowerKeywords = filter.keyword.map { $0.lowercased() }
+                let name = cafe.shopName.lowercased()
+                let address = cafe.address.lowercased()
+                if lowerKeywords.contains(where: { name.contains($0) || address.contains($0) }) {
+                    match = true
+                }
+            }
+
+            // 城市
+            if filter.cities != "全部", cafe.city == filter.cities {
+                match = true
+            }
+
+            // 區域
+            if filter.districts != "全部", cafe.district == filter.districts {
+                match = true
+            }
+
+            // 插座
+            if filter.sockets == "有插座", cafe.services.indices.contains(6), cafe.services[6] {
+                match = true
+            }
+
+            // Wifi
+            if filter.wifi == "有 Wi-Fi", cafe.types.contains("wifi") {
+                match = true
+            }
+
+            // 可久坐
+            if filter.stayTime == "可久坐", cafe.types.contains("long_stay") {
+                match = true
+            }
+
+            return match
+        }
     }
+
     
     func getDefaultFilterData(location: CLLocationCoordinate2D) async -> [CafeInfoObject] {
         guard let locationArray = await getCityDist(location: location),
