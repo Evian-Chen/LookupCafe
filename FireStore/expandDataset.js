@@ -19,8 +19,10 @@ async function expandDataset() {
       await categorize(city, district, cafes);
 
       console.log(`finish ${city}, ${district}`);
-      return;
     }
+
+    console.log(`finish ${city}`);
+    return;
   }
 }
 
