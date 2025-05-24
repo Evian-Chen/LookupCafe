@@ -11,6 +11,8 @@ const CATEGORIES = ["highRatings", "serves_beer", "serves_brunch", "serves_dinne
 async function expandDataset() {
   console.log("KEY:", GOOGLEAPIKEY); 
   for (const city of CITIES) {
+    if (city === "台北市") { city = "臺北市"; };
+
     for (const district of DISTRICTS[city]) {
       console.log(`searching ${city}, ${district}`);
       const cafes = await getNearByCafes(city, district);
@@ -50,15 +52,13 @@ async function getNearByCafes(city, district) {
       const cafeRes = await axios.get(cafeUrl);
       const cafes = cafeRes.data.results;
 
-      console.log("cafes: ", cafes);
+      // console.log("cafes: ", cafes);
 
       for (const cafe of cafes) {
         if (!seen.has(cafe.place_id)) {
           seen.add(cafe.place_id);
           allCafes.push(cafe);
-        } else {
-          console.log("seen: ", cafe.place_id);
-        }
+        } 
       }
     } catch (e) {
       console.error("Failed to fetch detail:", e.message);
@@ -67,6 +67,7 @@ async function getNearByCafes(city, district) {
   }
 
   // 3. 回傳透過小方塊找到的每間咖啡廳
+  console.log("found ", allCafes.length, " cafes in ", city, district);
   return allCafes;
 }
 
@@ -104,41 +105,51 @@ async function categorize(city, district, cafes) {
     for (const category of CATEGORIES) {
       const cafeRef = doc(
         collection(db, category, city, district),
-        `${cafe.name}_${cafe.place_id}`
+        `${cafe.name.replaceAll("/", "_")}_${cafe.place_id}`
       );
       
       const document = await getDoc(cafeRef);
       if (document.exists()) {
-        console.log(`${cafe.name} exists`);
-        return;
+        continue;
       }
 
       // 該咖啡廳不存在資料庫，使用details搜尋，並加入資料庫
       await addToDataset(city, district, cafe, category, cafeRef);
-      console.log("finish writing: ", city, district);
     }
   }
+
+  console.log("finish writing ", city, district);
 }
 
 async function addToDataset(city, district, cafe, category, cafeRef) {
   const detailUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${cafe.place_id}&language=zh-TW&key=${GOOGLEAPIKEY}`;
+
   try {
     const res = await axios.get(detailUrl);
     const data = res.data.result;
 
-    if (!(category === 'highRatings' && cafe.rating >= 4.3)) { return; } 
-    if (!(category === 'serves_beer' && data.serves_beer)) { return; }
-    if (!(category === 'serves_brunch' && data.serves_lunch)) { return; }
-    if (!(category === 'takeout' && data.takeout)) { return; }
+    // 決定該分類是否符合條件
+    const categoryConditions = {
+      highRatings: () => cafe.rating >= 4.3,
+      serves_beer: () => data.serves_beer,
+      serves_brunch: () => data.serves_brunch,
+      serves_dinner: () => data.serves_dinner,
+      takeout: () => data.takeout
+    };
+
+    const shouldAdd = categoryConditions[category]?.();
+    if (!shouldAdd) {
+      return;
+    }
 
     const cafeData = buildCafeData(city, district, data);
-    console.log("writing dataset");
     await setDoc(cafeRef, cafeData);
+    console.log(`Written ${cafeData.name} to ${category}`);
   } catch (e) {
-    console.error("❌ Failed to fetch detail:", e.message);
-    return;
+    console.error("Failed to fetch detail or write to Firestore:", e.message);
   }
-} 
+}
+
 
 function buildCafeData(city, district, data) {
   const cafeData = {
