@@ -15,8 +15,11 @@ struct RecommendView: View {
         NavigationView {
             ScrollView {
                 LazyVStack(spacing: 24, pinnedViews: .sectionHeaders) {
-                    RecommendationSectionView(category: .beerCafe, categoryManager: categoryManager)
                     RecommendationSectionView(category: .highRatings, categoryManager: categoryManager)
+                    RecommendationSectionView(category: .beerCafe, categoryManager: categoryManager)
+                    RecommendationSectionView(category: .brunchCafe, categoryManager: categoryManager)
+                    RecommendationSectionView(category: .dinnerCafe, categoryManager: categoryManager)
+                    RecommendationSectionView(category: .tackoutCafe, categoryManager: categoryManager)
                 }
                 .padding(.vertical)
             }
