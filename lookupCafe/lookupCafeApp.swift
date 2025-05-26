@@ -11,36 +11,27 @@ import FirebaseCore
 import FirebaseAuth
 import GoogleSignIn
 
+class AppState: ObservableObject {
+    @Published var isReady = false
+}
+
 @main
 struct lookupCafeApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     @StateObject var locationManager = LocationDataManager()
+    @StateObject var appState = AppState()
 
     init() {
         FirebaseApp.configure()
-        // 初始化這位使用者
         _ = UserDataManager.shared
-        
-        // 之前用來修補資料庫的空缺
-//        Task {
-//            let fixer = FirestoreFixer()
-//            await fixer.fixAllCategories(categories: [
-//                "serves_beer",
-//                "serves_brunch",
-//                "serves_dinner",
-//                "takeout",
-//                "highRatings"
-//            ])
-//        }
-
     }
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(locationManager)
+                .environmentObject(appState)
         }
     }
 }
-
 

@@ -22,7 +22,6 @@ async function expandDataset() {
     }
 
     console.log(`finish ${city}`);
-    return;
   }
 }
 
@@ -48,12 +47,19 @@ async function getNearByCafes(city, district) {
   const seen = new Set();
   for (const point of grid) {
     const cafeUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${point.lat},${point.lng}&radius=1000&keyword=咖啡&language=zh-TW&key=${GOOGLEAPIKEY}`;
-    console.log("📍 Fetching cafes at:", point.lat, point.lng);
+    console.log(`📍 Fetching ${city} ${district} cafes at:`, point.lat, point.lng);
 
     try {
       const cafeRes = await axios.get(cafeUrl);
-      const cafes = cafeRes.data.results;
+      
+      const cafeData = cafeRes.data;
 
+      if (cafeData.status !== "OK" || !Array.isArray(cafeData.results)) {
+        console.error(`❌ Google API error at (${point.lat}, ${point.lng}): ${cafeData.status}`);
+        continue; // 繼續下一個 point，不中斷整體流程
+      }
+
+      const cafes = cafeData.results;
       // console.log("cafes: ", cafes);
 
       for (const cafe of cafes) {
@@ -123,6 +129,10 @@ async function categorize(city, district, cafes) {
   console.log("finish writing ", city, district);
 }
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function addToDataset(city, district, cafe, category, cafeRef) {
   const detailUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${cafe.place_id}&language=zh-TW&key=${GOOGLEAPIKEY}`;
 
@@ -151,7 +161,6 @@ async function addToDataset(city, district, cafe, category, cafeRef) {
     console.error("Failed to fetch detail or write to Firestore:", e.message);
   }
 }
-
 
 function buildCafeData(city, district, data) {
   const cafeData = {
