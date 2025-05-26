@@ -35,7 +35,7 @@ class CategoryManager: ObservableObject {
     func asyncInit() async {
         self.categories = readInCategories()
         
-//        LocalCacheManager.shared.clearCache()  // 清除沙盒資料
+        LocalCacheManager.shared.clearCache()  // 清除沙盒資料
         if let cached = LocalCacheManager.shared.loadCafeDict() {
             for (category, cafeList) in cached {
                 let obj = Categoryobjc(categoryName: category, data: [])
@@ -66,7 +66,6 @@ class CategoryManager: ObservableObject {
                     let city = cityDoc.documentID
                     print("cur city: \(city)")
                     guard let districts = locManager.cityDistricts[city] else {
-                        print("\(city) not exists in locManager.cityDistricts")
                         continue
                     }
 
@@ -145,6 +144,22 @@ class Categoryobjc: ObservableObject {
                 servicesDict["serves_wine"] ?? false,
                 servicesDict["takeout"] ?? false
             ]
+            
+            let reviewDicts = cafe["reviews"] as? [[String: Any]]
+            let reviews: [Review]? = reviewDicts?.compactMap { dict in
+                guard let time = dict["review_time"] as? String,
+                      let name = dict["reviewer_name"] as? String,
+                      let rating = dict["reviewer_rating"] as? Int,
+                      let text = dict["reviewer_text"] as? String else {
+                    return nil
+                }
+                return Review(
+                    review_time: time,
+                    reviewer_name: name,
+                    reviewer_rating: rating,
+                    reviewer_text: text
+                )
+            }
 
             let cleanCafeInfoObjc = CafeInfoObject(
                 shopName: cafe["name"] as? String ?? "未知店名",
@@ -156,13 +171,12 @@ class Categoryobjc: ObservableObject {
                 services: servicesArray,
                 types: cafe["types"] as? [String] ?? [],
                 weekdayText: cafe["weekday_text"] as? [String] ?? ["no business hours available"],
-                reviews: nil,
+                reviews: reviews ?? [],
                 latitude: cafe["latitude"] as? Double ?? 0.0,
                 longitude: cafe["longitude"] as? Double ?? 0.0
             )
 
             cafeInfoObjList.append(cleanCafeInfoObjc)
-            print("obj: \(cleanCafeInfoObjc)")
         }
 
         DispatchQueue.main.async {
@@ -249,8 +263,6 @@ class Categoryobjc: ObservableObject {
         print("Filtered \(matched.count) cafes for \(city)-\(district)")
         return matched
     }
-
-
     
     func getCityDist(location: CLLocationCoordinate2D) async -> [String]? {
         let geocoder = CLGeocoder()

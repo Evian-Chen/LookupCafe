@@ -1,2 +1,5 @@
 serves_beer
 highRatings
+serves_brunch
+serves_dinner
+takeout
