@@ -37,6 +37,7 @@ class CategoryManager: ObservableObject {
         
         // 清除全部分類快取
 //        LocalCacheManager.shared.clearAllCategories(self.categories)
+        
 
         // 嘗試載入每個分類的個別快取
         let cached = LocalCacheManager.shared.loadAll(self.categories)
@@ -49,9 +50,6 @@ class CategoryManager: ObservableObject {
             self.isLoaded = true
             return
         }
-
-        self.categoryObjcList = await loadCategoryData()
-        self.isLoaded = true
 
         self.categoryObjcList = await loadCategoryData()
         self.isLoaded = true
@@ -115,14 +113,14 @@ class CategoryManager: ObservableObject {
                                 try await districtRef.getDocuments(source: .server)
                             }
 
-                            print("✅ 成功取得 \(cafeDoc.count) 筆資料 from \(district)")
+                            print("成功取得 \(cafeDoc.count) 筆資料 from \(district)")
 
                             for cafeData in cafeDoc.documents {
                                 categoryObjc.data.append(cafeData.data())
                             }
 
                         } catch {
-                            print("❌ district \(district) 發生錯誤或超時：\(error.localizedDescription)")
+                            print("district \(district) 發生錯誤或超時：\(error.localizedDescription)")
                             continue
                         }
                     }
@@ -137,7 +135,7 @@ class CategoryManager: ObservableObject {
             result[category] = categoryObjc
         }
 
-        // ✅ 使用新快取邏輯：逐一儲存分類
+        // 使用新快取邏輯：逐一儲存分類
         var dict: [String: [CafeInfoObject]] = [:]
         for (key, obj) in result {
             dict[key] = obj.cleanCafeData
@@ -195,12 +193,24 @@ class Categoryobjc: ObservableObject {
             
             let reviewDicts = cafe["reviews"] as? [[String: Any]]
             let reviews: [Review]? = reviewDicts?.compactMap { dict in
-                guard let time = dict["review_time"] as? String,
-                      let name = dict["reviewer_name"] as? String,
-                      let rating = dict["reviewer_rating"] as? Int,
-                      let text = dict["reviewer_text"] as? String else {
+                guard
+                    let time = dict["review_time"] as? String,
+                    let name = dict["reviewer_name"] as? String,
+                    let text = dict["review_text"] as? String
+                else {
                     return nil
                 }
+
+                // 嘗試強轉 Int，fallback 使用 NSNumber
+                let rating: Int
+                if let intRating = dict["reviewer_rating"] as? Int {
+                    rating = intRating
+                } else if let numRating = dict["reviewer_rating"] as? NSNumber {
+                    rating = numRating.intValue
+                } else {
+                    rating = 0 // 預設值，或 return nil
+                }
+
                 return Review(
                     review_time: time,
                     reviewer_name: name,
