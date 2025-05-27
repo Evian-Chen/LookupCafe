@@ -9,6 +9,7 @@ import SwiftUI
 import SwiftData
 import FirebaseCore
 import FirebaseAuth
+import FirebaseFirestore
 import GoogleSignIn
 
 class AppState: ObservableObject {
@@ -22,7 +23,9 @@ struct lookupCafeApp: App {
     @StateObject var appState = AppState()
 
     init() {
-        FirebaseApp.configure()
+        if FirebaseApp.app() == nil {
+            FirebaseApp.configure()
+        }
         _ = UserDataManager.shared
     }
 

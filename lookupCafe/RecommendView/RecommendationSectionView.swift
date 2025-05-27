@@ -38,8 +38,10 @@ struct RecommendationSectionView: View {
     
     var body: some View {
         Section {
-            if filteredCafes.isEmpty {
+            if isLoading {
                 ProgressView("is loading...")
+            } else if filteredCafes.isEmpty {
+                Text("找不到咖啡廳")
             } else {
                 ForEach(filteredCafes.prefix(5)) { cafe in
                     CafeInfoCardView(cafeObj: cafe)
@@ -57,7 +59,10 @@ struct RecommendationSectionView: View {
     
     func loadFilteredData() async {
         // 先得到某個類別的所有東西
-        let obj = categoryManager.categoryObjcList[category.englishCategoryName]!
+        guard let obj = categoryManager.categoryObjcList[category.englishCategoryName] else {
+            print("can not find category: \(category.englishCategoryName)")
+            return
+        }
         guard let userLoc = locationManager.userLocation else { return }
         let cafes = await obj.getDefaultFilterData(location: userLoc)
         filteredCafes = cafes

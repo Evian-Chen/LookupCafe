@@ -35,8 +35,12 @@ class CategoryManager: ObservableObject {
     func asyncInit() async {
         self.categories = readInCategories()
         
-        LocalCacheManager.shared.clearCache()  // 清除沙盒資料
-        if let cached = LocalCacheManager.shared.loadCafeDict() {
+        // 清除全部分類快取
+//        LocalCacheManager.shared.clearAllCategories(self.categories)
+
+        // 嘗試載入每個分類的個別快取
+        let cached = LocalCacheManager.shared.loadAll(self.categories)
+        if !cached.isEmpty {
             for (category, cafeList) in cached {
                 let obj = Categoryobjc(categoryName: category, data: [])
                 obj.cleanCafeData = cafeList
@@ -48,7 +52,35 @@ class CategoryManager: ObservableObject {
 
         self.categoryObjcList = await loadCategoryData()
         self.isLoaded = true
+
+        self.categoryObjcList = await loadCategoryData()
+        self.isLoaded = true
     }
+    
+    func withTimeout<T>(
+        seconds: TimeInterval,
+        task: @escaping () async throws -> T
+    ) async throws -> T {
+        try await withThrowingTaskGroup(of: T.self) { group in
+            group.addTask {
+                try await task()
+            }
+
+            group.addTask {
+                try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                throw TimeoutError()
+            }
+
+            guard let result = try await group.next() else {
+                throw TimeoutError()
+            }
+
+            group.cancelAll()
+            return result
+        }
+    }
+
+    struct TimeoutError: Error {}
 
     private func loadCategoryData() async -> [String: Categoryobjc] {
         print("loading category data")
@@ -59,10 +91,12 @@ class CategoryManager: ObservableObject {
             let categoryObjc = Categoryobjc(categoryName: category, data: [])
 
             do {
-                let categoryData = try await fsManager.db.collection(category).getDocuments()
+                let categoryData = try await fsManager.db.collection(category).getDocuments(source: .server)
                 print("load in data, fetch from: \(category)")
 
                 for cityDoc in categoryData.documents {
+                    await Task.yield()
+
                     let city = cityDoc.documentID
                     print("cur city: \(city)")
                     guard let districts = locManager.cityDistricts[city] else {
@@ -72,10 +106,24 @@ class CategoryManager: ObservableObject {
                     for district in districts {
                         print("cur district: \(district)")
                         let districtRef = cityDoc.reference.collection(district)
-                        let cafeDoc = try await districtRef.getDocuments()
+                        print("waiting ref ", districtRef)
+                        
+                        await Task.yield()
 
-                        for cafeData in cafeDoc.documents {
-                            categoryObjc.data.append(cafeData.data())
+                        do {
+                            let cafeDoc = try await withTimeout(seconds: 10) {
+                                try await districtRef.getDocuments(source: .server)
+                            }
+
+                            print("✅ 成功取得 \(cafeDoc.count) 筆資料 from \(district)")
+
+                            for cafeData in cafeDoc.documents {
+                                categoryObjc.data.append(cafeData.data())
+                            }
+
+                        } catch {
+                            print("❌ district \(district) 發生錯誤或超時：\(error.localizedDescription)")
+                            continue
                         }
                     }
                 }
@@ -89,13 +137,13 @@ class CategoryManager: ObservableObject {
             result[category] = categoryObjc
         }
 
-        // 快取全部分類資料
+        // ✅ 使用新快取邏輯：逐一儲存分類
         var dict: [String: [CafeInfoObject]] = [:]
         for (key, obj) in result {
             dict[key] = obj.cleanCafeData
             print("🔍 key=\(key), count=\(obj.cleanCafeData.count)")
         }
-        LocalCacheManager.shared.saveCafeDict(dict)
+        LocalCacheManager.shared.saveAll(categories: dict)
 
         return result
     }
