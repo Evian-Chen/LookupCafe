@@ -85,12 +85,16 @@ struct HeaderDetailView: View {
                                 showingDeleteAlert = true
                                 labelToDel = label
                             } label: {
-                                Text("\(child.value)")
-                                    .bold()
-                                    .foregroundColor(.white)
-                                    .padding(7)
-                                    .background(.blue)
-                                    .cornerRadius(10)
+                                HStack {
+                                    Text("\(child.value)")
+                                        .bold()
+                                        
+                                    Image(systemName: "xmark.circle")
+                                }
+                                .foregroundColor(.white)
+                                .padding(7)
+                                .background(.blue)
+                                .cornerRadius(10)
                             }
                         }
                     }
@@ -102,12 +106,15 @@ struct HeaderDetailView: View {
                         labelToDel = "keyword"
                         keywordToDel = word
                     } label: {
-                        Text("\(word)")
-                            .bold()
-                            .foregroundColor(.white)
-                            .padding(7)
-                            .background(.blue)
-                            .cornerRadius(10)
+                        HStack {
+                            Text("\(word)")
+                                .bold()
+                            Image(systemName: "xmark.circle")
+                        }
+                        .foregroundColor(.white)
+                        .padding(7)
+                        .background(.blue)
+                        .cornerRadius(10)
                     }
                 }
             } // lazyVgrid
