@@ -34,10 +34,6 @@ class CategoryManager: ObservableObject {
     @MainActor
     func asyncInit() async {
         self.categories = readInCategories()
-        
-        // 清除全部分類快取
-//        LocalCacheManager.shared.clearAllCategories(self.categories)
-        
 
         // 嘗試載入每個分類的個別快取
         let cached = LocalCacheManager.shared.loadAll(self.categories)
@@ -243,6 +239,9 @@ class Categoryobjc: ObservableObject {
     }
     
     func getFilteredData(location: CLLocationCoordinate2D, filter: FilterQuery, defaultCafes: [CafeInfoObject]) -> [CafeInfoObject] {
+        print("cur filter: \(filter)")
+        print("default cafes count: \(defaultCafes.count)")
+        
         // 如果條件完全沒設定，就直接回傳預設列表
         let hasAnyFilter =
             !(filter.keyword.isEmpty) ||
@@ -251,6 +250,8 @@ class Categoryobjc: ObservableObject {
             filter.sockets != "全部" ||
             filter.wifi != "全部" ||
             filter.stayTime != "全部"
+        
+        print("hasAnyFilter: \(hasAnyFilter)")
 
         guard hasAnyFilter else {
             return defaultCafes
@@ -301,6 +302,8 @@ class Categoryobjc: ObservableObject {
 
     
     func getDefaultFilterData(location: CLLocationCoordinate2D) async -> [CafeInfoObject] {
+        print("at getDefaultFilterData")
+        
         guard let locationArray = await getCityDist(location: location),
               locationArray.count == 2 else {
             print("無法取得地理位置")

@@ -68,7 +68,6 @@ enum RecommendationCategory: String {
     case beerCafe = "serves_beer"
     case brunchCafe = "serves_brunch"
     case dinnerCafe = "serves_dinner"
-    case tackoutCafe = "takeout"
     
     /// 顯示在 UI 上的中文標題
     var title: String {
@@ -81,8 +80,6 @@ enum RecommendationCategory: String {
             return "早午餐咖啡廳"
         case .dinnerCafe:
             return "有晚餐的咖啡廳"
-        case .tackoutCafe:
-            return "可外帶的咖啡廳"
         }
     }
     

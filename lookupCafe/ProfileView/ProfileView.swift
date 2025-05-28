@@ -10,15 +10,12 @@ import FirebaseAuth
 
 
 struct SettingsView: View {
-    @AppStorage("isDarkMode") private var isDarkMode = false
     @State private var showingAlert = false
     @EnvironmentObject var authViewModel: AuthViewModel
     
     var body: some View {
         NavigationStack {
             Form {
-                Toggle("Dark Mode", isOn: $isDarkMode)
-                
                 // 登出
                 Button {
                     showingAlert.toggle()

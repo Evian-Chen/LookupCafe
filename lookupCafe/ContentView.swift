@@ -20,31 +20,26 @@ struct TabItemView: View {
 
 
 struct LoadingView: View {
-    @State private var rotate = false
+    @State private var isAnimating = false
 
     var body: some View {
         VStack {
             Image("LoadingIcon")
                 .resizable()
                 .frame(width: 120, height: 120)
-                .rotationEffect(.degrees(rotate ? 10 : -10))
-                .animation(
-                    Animation.easeInOut(duration: 1).repeatForever(autoreverses: true),
-                    value: rotate
-                )
+                .rotationEffect(.degrees(isAnimating ? 360 : 0))
+                .animation(.linear(duration: 1).repeatForever(autoreverses: false), value: isAnimating)
                 .onAppear {
-                    rotate = true
+                    isAnimating = true
                 }
 
-            Text("第一次啟動需要載入資料")
-            Text("約花費三到五分鐘，請稍候...")
-                .padding()
+            Text("資料載入中，請稍候...")
         }
     }
 }
 
+
 struct ContentView: View {
-    @AppStorage("isDarkMode") private var isDarkMode = false
     @EnvironmentObject var appState: AppState
 
     @StateObject var authViewModel = AuthViewModel()
@@ -72,11 +67,11 @@ struct ContentView: View {
             }
         }
         .task {
+            try? await Task.sleep(nanoseconds: 200_000_000) // 0.2秒
             await categoryManager.asyncInit()
             await MainActor.run {
                 appState.isReady = true
             }
         }
-        .preferredColorScheme(isDarkMode ? .dark : .light)
     }
 }

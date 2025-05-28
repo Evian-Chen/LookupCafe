@@ -190,6 +190,14 @@ struct CafeDetailView: View {
                         .padding(.horizontal, 8)
                     
                     HStack {
+                        HStack(spacing: 8) {
+                            Image(systemName: "star.fill")
+                                .foregroundColor(.yellow)
+                            Text(String(cafeObj.rating))
+                                .bold()
+                                .font(.title3)
+                        }
+                        Spacer()
                         // 登入過後才會有愛心圖案
                         if userManager.isSignIn() {
                             HStack {
@@ -201,14 +209,7 @@ struct CafeDetailView: View {
                                 }
                                 Text(userManager.isFavorite(cafeId: cafeObj.id.uuidString) ? "已經加入我的最愛！" : "加入我的最愛")
                             }
-                        }
-                        
-                        HStack(spacing: 8) {
-                            Image(systemName: "star.fill")
-                                .foregroundColor(.yellow)
-                            Text(String(cafeObj.rating))
-                                .bold()
-                                .font(.title3)
+                            .padding(.trailing, 20)
                         }
                     }
                     

@@ -12,11 +12,11 @@ import Foundation
 
 class UserDataManager: ObservableObject {
     static let shared = UserDataManager()
-
+    
     @Published var favoritesCafes: [CafeInfoObject] = []
     @Published var email: String = "載入中..."
     @Published var createdAt: String = "載入中..."
-
+    
     private var db = Firestore.firestore()
     private var uid: String? {
         return Auth.auth().currentUser?.uid
@@ -26,7 +26,7 @@ class UserDataManager: ObservableObject {
         fetchFavorites()
         fetchUserData()
     }
-
+    
     private init() {
         // do nothing
     }
@@ -38,7 +38,7 @@ class UserDataManager: ObservableObject {
         }
         return false
     }
-
+    
     // MARK: - 讀取使用者資料
     func fetchUserData() {
         guard let uid = uid else { return }
@@ -54,12 +54,12 @@ class UserDataManager: ObservableObject {
             }
         }
     }
-
+    
     // MARK: - 讀取最愛咖啡廳
     func fetchFavorites() {
         guard let uid = uid else { return }
         let favoritesRef = db.collection("users").document(uid).collection("favorites")
-
+        
         favoritesRef.getDocuments { snapshot, error in
             if let docs = snapshot?.documents {
                 self.favoritesCafes = docs.compactMap { doc in
@@ -68,39 +68,51 @@ class UserDataManager: ObservableObject {
             }
         }
     }
-
+    
     // MARK: - 切換最愛（加入或移除）
     func toggleFavorite(cafeObj: CafeInfoObject) {
         guard let uid = uid else {
             print("無法加入最愛，使用者未登入")
             return
         }
-
+        
         let userRef = db.collection("users").document(uid)
         let favoriteRef = userRef.collection("favorites").document(cafeObj.id.uuidString)
-
+        
         if isFavorite(cafeId: cafeObj.id.uuidString) {
             favoriteRef.delete()
             favoritesCafes.removeAll { $0.id == cafeObj.id }
         } else {
+            let reviewDict: [[String: Any]] = cafeObj.reviews?.compactMap { review in
+                return [
+                    "review_time": review.review_time,
+                    "reviewer_text": review.reviewer_text,
+                    "reviewer_name": review.reviewer_name,
+                    "reviewer_rating": review.reviewer_rating
+                ]
+            } ?? []
+            
             let cafeData: [String: Any] = [
+                "placeId": cafeObj.placeId,
                 "shopName": cafeObj.shopName,
+                "city": cafeObj.city,
+                "district": cafeObj.district,
                 "address": cafeObj.address,
                 "phoneNumber": cafeObj.phoneNumber,
                 "rating": cafeObj.rating,
+                "services": cafeObj.services,
                 "types": cafeObj.types,
                 "weekdayText": cafeObj.weekdayText,
-                "services": cafeObj.services,
-                "city": cafeObj.city,
-                "district": cafeObj.district,
-                "reviews": cafeObj.reviews
+                "reviews": reviewDict,
+                "latitude": cafeObj.latitude,
+                "longitude": cafeObj.longitude
             ]
             favoriteRef.setData(cafeData)
             favoritesCafes.append(cafeObj)
         }
     }
-
-
+    
+    
     // MARK: - 判斷是否為最愛
     func isFavorite(cafeId: String) -> Bool {
         return favoritesCafes.contains { $0.id.uuidString == cafeId }

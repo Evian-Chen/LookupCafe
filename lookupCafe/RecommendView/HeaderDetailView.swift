@@ -10,11 +10,13 @@ import SwiftUI
 // 點進去之後出現該分類的每一間咖啡廳
 struct HeaderDetailView: View {
     var category: RecommendationCategory
-    var cafes: [CafeInfoObject]
+    var cafes: [CafeInfoObject]  // 傳入的就是default cafes
     @State private var filteredCafes: [CafeInfoObject] = []
     
     @EnvironmentObject var locationManager: LocationDataManager
     
+    @State var showNumber = 10
+    @State var canShowMore = true
     @State private var showingSheetFilter = false
     @State var curFilterQuery: FilterQuery = FilterQuery()
     @State private var searchText = ""
@@ -29,6 +31,7 @@ struct HeaderDetailView: View {
         GridItem(.adaptive(minimum: 80), spacing: 10)
     ]
     
+    // 一旦顯示此畫面，就先去updateFiltered
     func updateFiltered() {
         guard let location = locationManager.userLocation,
               let categoryObj = categoryManager.categoryObjcList[category.englishCategoryName] else {
@@ -144,7 +147,7 @@ struct HeaderDetailView: View {
                         if filteredCafes.isEmpty {
                             Text("找不到符合條件的咖啡廳")
                         } else {
-                            ForEach(filteredCafes.prefix(10)) { cafe in
+                            ForEach(filteredCafes.prefix(showNumber)) { cafe in
                                 CafeInfoCardView(cafeObj: cafe)
                             }
                         }
@@ -152,11 +155,28 @@ struct HeaderDetailView: View {
                     }
                 }
                 .padding(.top)
+                
+                Button {
+                    if (filteredCafes.count >= showNumber + 10) {
+                        showNumber += 10
+                        canShowMore = true
+                    } else {
+                        canShowMore = false
+                        showNumber = filteredCafes.count
+                    }
+                    
+                } label: {
+                    Text(canShowMore ? "查看更多" : "已經到底了")
+                        .foregroundColor(.black)
+                        .padding()
+                        .background(.blue.opacity(0.2))
+                        .cornerRadius(10)
+                }
             }
             .onAppear {
                 print("🪵 categoryName: \(category.rawValue)")
             }
-            .navigationTitle("這裡是 \(category.title)")
+            .navigationTitle(category.title)
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -172,9 +192,25 @@ struct HeaderDetailView: View {
             }
             .onChange(of: curFilterQuery) { _ in
                 updateFiltered()
+                if filteredCafes.count < 10 {
+                    print("filtered cafes count: \(filteredCafes.count)")
+                    showNumber = filteredCafes.count
+                    canShowMore = false
+                } else {
+                    showNumber = 10
+                    canShowMore = true
+                }
             }
             .onAppear {
                 updateFiltered()
+                if filteredCafes.count < 10 {
+                    print("filtered cafes count: \(filteredCafes.count)")
+                    showNumber = filteredCafes.count
+                    canShowMore = false
+                } else {
+                    showNumber = 10
+                    canShowMore = true
+                }
             }
         }
     }

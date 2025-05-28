@@ -7,7 +7,7 @@
 
 // 用於查找篩選咖啡廳
 struct FilterQuery: Equatable {
-    var keyword: [String] = [""]
+    var keyword: [String] = []
     var cities: String = "全部"
     var districts: String = "全部"
     var sockets: String = "全部"

@@ -19,7 +19,6 @@ struct RecommendView: View {
                     RecommendationSectionView(category: .beerCafe, categoryManager: categoryManager)
                     RecommendationSectionView(category: .brunchCafe, categoryManager: categoryManager)
                     RecommendationSectionView(category: .dinnerCafe, categoryManager: categoryManager)
-                    RecommendationSectionView(category: .tackoutCafe, categoryManager: categoryManager)
                 }
                 .padding(.vertical)
             }
@@ -79,19 +78,25 @@ struct SectionHeaderView: View {
     var body: some View {
         NavigationLink(destination: HeaderDetailView(category: category, cafes: cafes)) {
             HStack {
-                Text(title)
-                    .font(.title3)
-                    .bold()
-                    .foregroundColor(.white)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.title2)
+                        .foregroundColor(.white)
+                    Text("點擊查看更多細節")
+                        .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.8))
+                }
                 Spacer()
+                Image(systemName: "chevron.right")
+                    .foregroundColor(.white)
             }
             .padding()
             .background(
                 RoundedRectangle(cornerRadius: 12)
                     .fill(Color.blue)
+                    .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
             )
             .padding(.horizontal, 20)
         }
-        .buttonStyle(PlainButtonStyle())
     }
 }
