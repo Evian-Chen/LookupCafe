@@ -2,14 +2,13 @@ import SwiftUI
 
 struct FilterPickerView: View {
     var filterOptionObj: FilterOptions
-    
-    @State private var selectedIndex = 0
-    
+    var optionsArr: [String]
+
     @Binding var selected: String
-    
+
     var body: some View {
         Picker(selection: $selected) {
-            ForEach(filterOptionObj.optionsArr, id: \.self) { opt in
+            ForEach(optionsArr, id: \.self) { opt in
                 Text(opt)
             }
         } label: {
@@ -19,6 +18,7 @@ struct FilterPickerView: View {
     }
 }
 
+
 struct FilterView: View {
     // Enums.swift
     @Binding var curFilterQuery: FilterQuery
@@ -27,6 +27,7 @@ struct FilterView: View {
     @State private var reset = false
     @State private var apply = false
     @State private var newFilterQuery = FilterQuery()
+    @State private var cityDistrictMap: [String: [String]] = [:]
     
     @State var tempKeyword: [String] = [""]
     
@@ -53,7 +54,22 @@ struct FilterView: View {
                 // Picker 區塊
                 List {
                     ForEach(FilterOptions.allCases) { option in
-                        FilterPickerView(filterOptionObj: option, selected: binding(for: option))
+                        let options: [String] = {
+                            switch option {
+                            case .cities:
+                                return ["全部"] + Array(cityDistrictMap.keys)
+                            case .districts:
+                                if let districts = cityDistrictMap[newFilterQuery.cities], newFilterQuery.cities != "全部" {
+                                    return ["全部"] + districts
+                                } else {
+                                    return ["全部"]
+                                }
+                            default:
+                                return option.optionsArr
+                            }
+                        }()
+
+                        FilterPickerView(filterOptionObj: option, optionsArr: options, selected: binding(for: option))
                     }
                 }
                 
@@ -98,6 +114,24 @@ struct FilterView: View {
             }
             .navigationTitle("條件篩選")
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                if let url = Bundle.main.url(forResource: "city_district", withExtension: "json"),
+                   let data = try? Data(contentsOf: url),
+                   let json = try? JSONDecoder().decode([String: [String]].self, from: data) {
+                    cityDistrictMap = json
+                }
+            }
+            .onChange(of: newFilterQuery.cities) { newCity in
+                // 如果地區不屬於新的城市，則重設為「全部」
+                guard newCity != "全部",
+                      let validDistricts = cityDistrictMap[newCity],
+                      validDistricts.contains(newFilterQuery.districts) == false else {
+                    return
+                }
+
+                newFilterQuery.districts = "全部"
+            }
+
         }
     }
 }

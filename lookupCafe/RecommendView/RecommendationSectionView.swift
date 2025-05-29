@@ -47,7 +47,7 @@ struct RecommendationSectionView: View {
                 }
             }
         } header: {
-            SectionHeaderView(title: category.title, category: category, cafes: filteredCafes)
+            SectionHeaderView(title: category.title, category: category)
         }
         .task(id: categoryManager.isLoaded) {
             if categoryManager.isLoaded {
@@ -73,10 +73,10 @@ struct RecommendationSectionView: View {
 struct SectionHeaderView: View {
     var title: String
     var category: RecommendationCategory
-    var cafes: [CafeInfoObject]
+    @EnvironmentObject var categoryManager: CategoryManager
     
     var body: some View {
-        NavigationLink(destination: HeaderDetailView(category: category, cafes: cafes)) {
+        NavigationLink(destination: HeaderDetailView(category: category, cafes: categoryManager.categoryObjcList[category.englishCategoryName]?.cleanCafeData ?? [])) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)

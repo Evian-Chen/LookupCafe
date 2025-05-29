@@ -10,7 +10,7 @@ import SwiftUI
 // 點進去之後出現該分類的每一間咖啡廳
 struct HeaderDetailView: View {
     var category: RecommendationCategory
-    var cafes: [CafeInfoObject]  // 傳入的就是default cafes
+    var cafes: [CafeInfoObject]  
     @State private var filteredCafes: [CafeInfoObject] = []
     
     @EnvironmentObject var locationManager: LocationDataManager
@@ -27,9 +27,7 @@ struct HeaderDetailView: View {
     
     @EnvironmentObject var categoryManager: CategoryManager
     
-    let columns = [
-        GridItem(.adaptive(minimum: 80), spacing: 10)
-    ]
+    let columns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 3)
     
     // 一旦顯示此畫面，就先去updateFiltered
     func updateFiltered() {
@@ -88,6 +86,7 @@ struct HeaderDetailView: View {
                                 HStack {
                                     Text("\(child.value)")
                                         .bold()
+                                        .lineLimit(1)
                                         
                                     Image(systemName: "xmark.circle")
                                 }
@@ -109,6 +108,7 @@ struct HeaderDetailView: View {
                         HStack {
                             Text("\(word)")
                                 .bold()
+                                .lineLimit(1)
                             Image(systemName: "xmark.circle")
                         }
                         .foregroundColor(.white)

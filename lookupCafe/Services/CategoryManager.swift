@@ -257,46 +257,45 @@ class Categoryobjc: ObservableObject {
             return defaultCafes
         }
 
-        // OR 策略：只要有一個條件符合，就納入
         return defaultCafes.filter { cafe in
-            var match = false
-
-            // 關鍵字（名稱 / 地址）
+            // 關鍵字
             if !filter.keyword.isEmpty && !(filter.keyword.count == 1 && filter.keyword[0].isEmpty) {
                 let lowerKeywords = filter.keyword.map { $0.lowercased() }
                 let name = cafe.shopName.lowercased()
                 let address = cafe.address.lowercased()
-                if lowerKeywords.contains(where: { name.contains($0) || address.contains($0) }) {
-                    match = true
+                if !lowerKeywords.contains(where: { name.contains($0) || address.contains($0) }) {
+                    return false
                 }
             }
 
             // 城市
-            if filter.cities != "全部", cafe.city == filter.cities {
-                match = true
+            if filter.cities != "全部", cafe.city != filter.cities {
+                return false
             }
 
             // 區域
-            if filter.districts != "全部", cafe.district == filter.districts {
-                match = true
+            if filter.districts != "全部", cafe.district != filter.districts {
+                return false
             }
 
             // 插座
-            if filter.sockets == "有插座", cafe.services.indices.contains(6), cafe.services[6] {
-                match = true
+            if filter.sockets == "有插座" {
+                if !cafe.services.indices.contains(6) || !cafe.services[6] {
+                    return false
+                }
             }
 
             // Wifi
-            if filter.wifi == "有 Wi-Fi", cafe.types.contains("wifi") {
-                match = true
+            if filter.wifi == "有 Wi-Fi", !cafe.types.contains("wifi") {
+                return false
             }
 
             // 可久坐
-            if filter.stayTime == "可久坐", cafe.types.contains("long_stay") {
-                match = true
+            if filter.stayTime == "可久坐", !cafe.types.contains("long_stay") {
+                return false
             }
 
-            return match
+            return true
         }
     }
 
