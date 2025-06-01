@@ -1,27 +1,24 @@
 # LookupCafe
 
-**LookupCafe** is an iOS application developed using **SwiftUI**, **Firebase**, and the **Google Maps SDK**. It helps users discover nearby coffee shops based on their current location, explore detailed cafe information, and personalize their experience through advanced filtering and a favorite list.
+**LookupCafe** is an iOS app built with **SwiftUI**, **Firebase**, and the **Google Maps SDK**. It enables users to discover nearby coffee shops based on their current location, browse detailed cafe information, apply advanced filters, and manage a personalized list of favorites.
 
 ## Features
 
-* **Location-based Discovery**: Display nearby coffee shops on a Google Map using interactive markers
-* **Detailed Cafe Info**: View name, address, phone number, opening hours, rating, user reviews, and service availability
-* **Favorites Management**: Add or remove cafes from a personalized "Favorites" list
-* **User Authentication**: Sync user-specific data securely via Firebase Authentication (Google Sign-In)
-* **Advanced Filters**: Search for cafes with specific criteria (e.g., high rating, Wi-Fi, power outlets, alcohol availability, etc.)
-* **Local Caching**: Store categorized cafe data locally for faster loading and offline access
-* **Cloud Sync**: Fetch and store metadata using Firebase Firestore
+* Location-based discovery using Google Maps and interactive markers
+* Detailed cafe information including name, address, phone number, opening hours, rating, reviews, and service availability
+* Favorites list for bookmarking cafes with user-specific sync
+* Google Sign-In via Firebase Authentication
+* Cloud-based storage and sync using Firebase Firestore
 
 ## Technologies Used
 
-* **SwiftUI** – Modern declarative UI framework for iOS development
-* **Google Maps SDK for iOS** – Location services and interactive map rendering
-* **Firebase Firestore** – Scalable NoSQL cloud database
-* **Firebase Authentication** – Google Sign-In support
-* **CoreLocation & CLGeocoder** – Used for reverse geocoding and location awareness
-* **Swift Concurrency** – Asynchronous data loading and UI updates
+* **SwiftUI** – Declarative user interface framework for iOS
+* **Firebase Firestore** – NoSQL cloud database for metadata and user data
+* **Firebase Authentication** – Google Sign-In and session management
+* **Google Maps SDK for iOS** – Interactive map and location services
+* **CoreLocation / CLGeocoder** – Location awareness and reverse geocoding
 
-## Installation & Setup
+## Installation and Setup
 
 ### 1. Clone the Repository
 
@@ -30,36 +27,60 @@ git clone https://github.com/your-username/lookupCafe.git
 cd lookupCafe
 ```
 
-### 2. Install Dependencies
+### 2. Install Dependencies (Swift Package Manager)
 
-Ensure [CocoaPods](https://cocoapods.org/) is installed:
+Open the project in Xcode, then:
 
-```bash
-pod install
-```
+* Go to **File → Add Packages**
+* Add the following packages:
 
-### 3. Configure API Keys
+  * [Firebase iOS SDK](https://github.com/firebase/firebase-ios-sdk)
+  * [Google Maps SDK for iOS](https://github.com/googlemaps/google-maps-ios-utils)
 
-Set your Google Maps API key in `Info.plist`:
+Select and include:
+
+* `FirebaseFirestore`
+* `FirebaseAuth`
+* `GoogleMaps`
+* `GooglePlaces`
+
+> **Note:** Do not use CocoaPods. This project uses **Swift Package Manager**.
+
+### 3. Configure Firebase and API Keys
+
+#### a. GoogleService-Info.plist
+
+Download your `GoogleService-Info.plist` from the [Firebase Console](https://console.firebase.google.com/) and add it to the root of your Xcode project (check "Copy items if needed").
+
+#### b. Update Info.plist
+
+Add the following keys to your `Info.plist`:
 
 ```xml
+<key>Privacy - Location When In Use Usage Description</key>
+<string>我們需要您的位置來顯示附近的咖啡店</string>
+
+<key>GoogleSearchApi</key>
+<string>YOUR_GOOGLE_SEARCH_API_KEY</string>
+
 <key>GMSApiKey</key>
 <string>YOUR_GOOGLE_MAPS_API_KEY</string>
 ```
 
-If you're using Google Places or Geocoding, also add:
+Replace the keys with your credentials from the [Google Cloud Console](https://console.cloud.google.com/).
 
-```xml
-<key>NSLocationWhenInUseUsageDescription</key>
-<string>This app uses your location to show nearby cafes.</string>
-```
+### 4. Run the Project
 
-### 4. Open the Workspace
-
-Use Xcode to open the `.xcworkspace` file and run the project:
+Open the project in Xcode:
 
 ```bash
-open lookupCafe.xcworkspace
+open lookupCafe.xcodeproj
 ```
 
-Choose a simulator or physical device to test the app.
+Select a simulator or device, then build and run the project.
+
+## Known Issues
+
+* **Multiple commands produced output** error in `Info.plist`
+  Refer to this [HackMD note (Mandarin)](https://hackmd.io/@L5teZbLOSuegHZDK5YEvoA/BJApD5q2kg) for a solution.
+
