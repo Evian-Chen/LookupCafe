@@ -1,6 +1,6 @@
 # LookupCafe
 
-**LookupCafe** is an iOS app built with **SwiftUI**, **Firebase**, and the **Google Maps SDK**. It enables users to discover nearby coffee shops based on their current location, browse detailed cafe information, apply advanced filters, and manage a personalized list of favorites.
+**LookupCafe** is an iOS app built with **SwiftUI, Firebase, and the Google Maps SDK**. It enables users to discover nearby coffee shops based on their current location, browse detailed cafe information, apply advanced filters, navigate with Apple Maps, and manage a personalized list of favorites.
 
 ## Features
 
@@ -17,6 +17,7 @@
 * **Firebase Authentication** – Google Sign-In and session management
 * **Google Maps SDK for iOS** – Interactive map and location services
 * **CoreLocation / CLGeocoder** – Location awareness and reverse geocoding
+* **MapKit** – Used for deep-linking to Apple Maps for navigation
 
 ## Installation and Setup
 
